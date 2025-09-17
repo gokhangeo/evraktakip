@@ -75,7 +75,7 @@
                         <input type="text" id="evrakSayisi" name="evrakSayisi" class="mt-1 block w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-md shadow-sm" readonly>
                     </div>
                     <div>
-                        <label for="sonCevapTarihi" class="block text-sm font-medium text-gray-600">Son Cevap Tarihi</label>
+                        <label for="sonCevapTarihi" class="block text-sm font-medium text-gray-600">Son Cevap Tarihi (Otomatik)</label>
                         <input type="date" id="sonCevapTarihi" name="sonCevapTarihi" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" required>
                     </div>
                      <div>
@@ -311,11 +311,10 @@
             }
         };
         
-        // YENİ FONKSİYON: Kaydedilen verinin sunucuda güncellendiğini doğrulamak için bekler.
         const confirmDataIsSynced = async (targetSha) => {
             let attempts = 0;
-            const maxAttempts = 10; // En fazla 10 saniye bekle
-            const delay = 1000; // Her deneme arası 1 saniye
+            const maxAttempts = 10; 
+            const delay = 1000; 
 
             while (attempts < maxAttempts) {
                 try {
@@ -324,11 +323,10 @@
                         const data = await response.json();
                         if (data.sha === targetSha) {
                             console.log(`Senkronizasyon başarılı! SHA: ${targetSha}`);
-                            // Global değişkenleri sunucudan gelen son veriyle güncelle
                             evraklarSha = data.sha;
                             const content = atob(data.content);
                             evraklar = content ? JSON.parse(content) : [];
-                            return; // Döngüden çık
+                            return; 
                         }
                     }
                 } catch (e) {
@@ -337,8 +335,7 @@
                 attempts++;
                 await new Promise(resolve => setTimeout(resolve, delay));
             }
-            console.warn("Veri senkronizasyonu zaman aşımına uğradı. Arayüz yerel veriyi gösteriyor olabilir.");
-            // Zaman aşımına uğrarsa, en azından SHA'yı güncelle ki bir sonraki kayıt işlemi başarısız olmasın
+            console.warn("Veri senkronizasyonu zaman aşımına uğradı.");
             evraklarSha = targetSha;
         };
 
@@ -363,7 +360,6 @@
                 if (response.ok) {
                     const data = await response.json();
                     const newSha = data.content.sha;
-                    // GÜNCELLEME: Kayıt sonrası senkronizasyon bekleme adımı eklendi
                     showLoader('Değişiklikler kaydedildi. Veri senkronizasyonu bekleniyor...');
                     await confirmDataIsSynced(newSha);
                 } else {
@@ -378,7 +374,6 @@
                 console.error('GitHub\'a veri kaydedilemedi:', error);
                 alert(`Değişiklikler GitHub'a kaydedilirken bir hata oluştu: ${error.message}`);
             } finally {
-                // confirmDataIsSynced fonksiyonu listeyi zaten güncellediği için sadece render ediyoruz.
                 renderEvraklar();
                 hideLoader();
             }
@@ -389,28 +384,65 @@
             const file = e.target.files[0];
             if (!file) return;
             
+            // Formu temizle
             konuInput.value = '';
             gelisTarihiInput.value = '';
             evrakSayisiInput.value = '';
-            
+            document.getElementById('sonCevapTarihi').value = '';
+
             try {
                 const text = await pdfMetniniCikar(file);
-                const tarihRegex = /(\d{2})\.(\d{2})\.(\d{4})/;
-                const tarihMatch = text.match(tarihRegex);
-                if (tarihMatch) {
-                    const [_, day, month, year] = tarihMatch;
-                    gelisTarihiInput.value = `${year}-${month}-${day}`;
-                }
+
+                // --- Genel Bilgileri Çıkar ---
                 const sayiRegex = /Sayı\s*:\s*(.*)/i;
                 const sayiMatch = text.match(sayiRegex);
-                if (sayiMatch) {
-                    evrakSayisiInput.value = sayiMatch[1].trim();
-                }
+                if (sayiMatch) { evrakSayisiInput.value = sayiMatch[1].trim(); }
+
                 const konuRegex = /Konu\s*:\s*(.*)/i;
                 const konuMatch = text.match(konuRegex);
-                if (konuMatch) {
-                    konuInput.value = konuMatch[1].trim();
+                if (konuMatch) { konuInput.value = konuMatch[1].trim(); }
+
+                // --- Tarihleri Çıkar ---
+                const allDatesRegex = /(\d{2})\.(\d{2})\.(\d{4})/g;
+                
+                // 1. Geliş Tarihi (genellikle metindeki ilk ve en yeni tarih)
+                const allDateMatchesInDoc = text.match(allDatesRegex);
+                if (allDateMatchesInDoc) {
+                    const sortedDates = [...new Set(allDateMatchesInDoc)]
+                        .map(dateStr => {
+                            const [day, month, year] = dateStr.split('.').map(Number);
+                            return new Date(year, month - 1, day);
+                        }).sort((a, b) => b - a);
+                    
+                    if (sortedDates.length > 0) {
+                        const gelisTarihi = sortedDates[0];
+                        gelisTarihiInput.value = gelisTarihi.toISOString().split('T')[0];
+                    }
                 }
+
+                // 2. Son Cevap Tarihi ("İlgi" bölümündeki en son tarih)
+                const ilgiRegex = /İlgi\s*:([\s\S]*?)(?=Konu\s*:|\n\n[A-ZÇĞİÖŞÜ])/i;
+                const ilgiMatch = text.match(ilgiRegex);
+                let latestDateInIlgi = null;
+
+                if (ilgiMatch && ilgiMatch[1]) {
+                    const ilgiText = ilgiMatch[1];
+                    const allDatesInIlgi = ilgiText.match(allDatesRegex);
+                    if (allDatesInIlgi) {
+                        allDatesInIlgi.forEach(dateStr => {
+                            const [day, month, year] = dateStr.split('.').map(Number);
+                            const currentDate = new Date(year, month - 1, day);
+                            if (!latestDateInIlgi || currentDate > latestDateInIlgi) {
+                                latestDateInIlgi = currentDate;
+                            }
+                        });
+                    }
+                }
+                
+                if (latestDateInIlgi) {
+                    document.getElementById('sonCevapTarihi').value = latestDateInIlgi.toISOString().split('T')[0];
+                }
+                
                 seciliDosyaBase64 = await dosyayiBase64eCevir(file);
             } catch (error) {
                 console.error("PDF okuma hatası:", error);
