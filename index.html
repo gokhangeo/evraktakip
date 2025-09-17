@@ -149,14 +149,13 @@
         const loader = document.getElementById('loader');
         
         const modalBackdrop = document.getElementById('pdfModalBackdrop');
-        const modal = document.getElementById('pdfModal');
+        const modal = document.getElementById('modal');
         const closeModalBtn = document.getElementById('closeModal');
         const modalTitle = document.getElementById('modalTitle');
         const pdfObject = document.getElementById('pdfObject');
 
         // --- GitHub API Ayarları ---
         // UYARI: Bu API anahtarının tarayıcıda olması GÜVENLİK AÇIĞI oluşturur.
-        // Bu anahtarın ele geçirilmesi, hesabınızda yetkisiz işlemlere yol açabilir.
         const p1 = 'github_pat_11BKQ5LFQ0a8x7P0oE4SVk_';
         const p2 = '64T4iVPHRp3zQBJvsez83ezJlNfo1dIb';
         const p3 = 'EoQ6HUCYPtrSLXDLMQZCoty0HQ1';
@@ -170,7 +169,7 @@
         // --- Uygulama Değişkenleri ---
         pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.worker.min.js`;
         let evraklar = [];
-        let evraklarSha = null; // evraklar.json dosyasının SHA'sı
+        let evraklarSha = null;
         let seciliDosyaBase64 = null;
 
         // --- Yardımcı Fonksiyonlar ---
@@ -181,6 +180,57 @@
         const hideLoader = () => {
             loader.style.display = 'none';
         };
+        const formatDate = (dateString) => {
+            if (!dateString) return '';
+            const [year, month, day] = dateString.split('-');
+            return `${day}.${month}.${year}`;
+        };
+        const formuTemizle = () => {
+            evrakFormu.reset();
+            seciliDosyaBase64 = null;
+        };
+        const dosyayiBase64eCevir = (file) => {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = error => reject(error);
+            });
+        };
+        const pdfMetniniCikar = async (file) => {
+            const fileReader = new FileReader();
+            fileReader.readAsArrayBuffer(file);
+            return new Promise((resolve, reject) => {
+                fileReader.onload = async () => {
+                    const typedarray = new Uint8Array(fileReader.result);
+                    try {
+                        const pdf = await pdfjsLib.getDocument(typedarray).promise;
+                        let fullText = '';
+                        for (let i = 1; i <= pdf.numPages; i++) {
+                            const page = await pdf.getPage(i);
+                            const textContent = await page.getTextContent();
+                            fullText += textContent.items.map(item => item.str).join('\n');
+                        }
+                        resolve(fullText);
+                    } catch (error) {
+                        reject(error);
+                    }
+                };
+                fileReader.onerror = reject;
+            });
+        };
+        const showModal = (evrak) => {
+            modalTitle.textContent = evrak.konu;
+            pdfObject.data = evrak.dosyaBase64;
+            modal.style.display = 'block';
+            modalBackdrop.style.display = 'block';
+        };
+        const hideModal = () => {
+            modal.style.display = 'none';
+            modalBackdrop.style.display = 'none';
+            pdfObject.data = '';
+        };
+
 
         // --- Ana Fonksiyonlar ---
         const renderEvraklar = (filter = '') => {
@@ -215,13 +265,6 @@
             });
         };
 
-        const pdfMetniniCikar = async (file) => { /* ... (içerik değişmedi) ... */ };
-        const dosyayiBase64eCevir = (file) => { /* ... (içerik değişmedi) ... */ };
-        const formuTemizle = () => { /* ... (içerik değişmedi) ... */ };
-        const formatDate = (dateString) => { /* ... (içerik değişmedi) ... */ };
-        const showModal = (evrak) => { /* ... (içerik değişmedi) ... */ };
-        const hideModal = () => { /* ... (içerik değişmedi) ... */ };
-
         // --- GitHub API Fonksiyonları ---
         const loadEvraklarFromGithub = async () => {
             showLoader('Evraklar GitHub\'dan yükleniyor...');
@@ -253,6 +296,7 @@
         const saveEvraklarToGithub = async () => {
             showLoader('Değişiklikler GitHub\'a kaydediliyor...');
             try {
+                // JSON.stringify'daki null, 2 parametresi okunabilirliği artırmak için JSON'ı formatlar
                 const content = btoa(unescape(encodeURIComponent(JSON.stringify(evraklar, null, 2))));
                 const body = {
                     message: `Evrak listesi güncellendi - ${new Date().toISOString()}`,
@@ -286,16 +330,48 @@
 
         // --- Olay Dinleyicileri (Event Listeners) ---
         pdfDosyaInput.addEventListener('change', async (e) => {
-            // ... (Bu kısım öncekiyle aynı, değişiklik yok)
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            konuInput.value = '';
+            gelisTarihiInput.value = '';
+            evrakSayisiInput.value = '';
+            
+            try {
+                const text = await pdfMetniniCikar(file);
+                const tarihRegex = /(\d{2})\.(\d{2})\.(\d{4})/;
+                const tarihMatch = text.match(tarihRegex);
+                if (tarihMatch) {
+                    const [_, day, month, year] = tarihMatch;
+                    gelisTarihiInput.value = `${year}-${month}-${day}`;
+                }
+                const sayiRegex = /Sayı\s*:\s*(.*)/i;
+                const sayiMatch = text.match(sayiRegex);
+                if (sayiMatch) {
+                    evrakSayisiInput.value = sayiMatch[1].trim();
+                }
+                const konuRegex = /Konu\s*:\s*(.*)/i;
+                const konuMatch = text.match(konuRegex);
+                if (konuMatch) {
+                    konuInput.value = konuMatch[1].trim();
+                }
+                // Düzeltilen kısım: seciliDosyaBase64'ü doğru değişkene atıyoruz.
+                seciliDosyaBase64 = await dosyayiBase64eCevir(file);
+            } catch (error) {
+                console.error("PDF okuma hatası:", error);
+                alert("PDF dosyası okunurken bir hata oluştu.");
+            }
         });
 
         evrakFormu.addEventListener('submit', async (e) => {
             e.preventDefault();
             if (!seciliDosyaBase64) {
-                alert('Lütfen bir PDF dosyası seçin.'); return;
+                alert('Lütfen bir PDF dosyası seçin.'); 
+                return;
             }
             if (!konuInput.value) {
-                alert('Lütfen konu/başlık alanını doldurun.'); return;
+                alert('Lütfen konu/başlık alanını doldurun.'); 
+                return;
             }
 
             const yeniEvrak = {
@@ -338,55 +414,6 @@
         // --- Başlangıç ---
         loadEvraklarFromGithub();
     });
-
-    // Değişmeyen fonksiyonları tekrar yazmamak için buraya kopyalıyorum
-    const pdfMetniniCikar = async (file) => { const fileReader = new FileReader(); fileReader.readAsArrayBuffer(file); return new Promise((resolve, reject) => { fileReader.onload = async () => { const typedarray = new Uint8Array(fileReader.result); try { const pdf = await pdfjsLib.getDocument(typedarray).promise; let fullText = ''; for (let i = 1; i <= pdf.numPages; i++) { const page = await pdf.getPage(i); const textContent = await page.getTextContent(); fullText += textContent.items.map(item => item.str).join('\n'); } resolve(fullText); } catch (error) { reject(error); } }; fileReader.onerror = reject; }); };
-    const dosyayiBase64eCevir = (file) => { return new Promise((resolve, reject) => { const reader = new FileReader(); reader.readAsDataURL(file); reader.onload = () => resolve(reader.result); reader.onerror = error => reject(error); }); };
-    const formuTemizle = () => { document.getElementById('evrakFormu').reset(); seciliDosyaBase64 = null; };
-    const formatDate = (dateString) => { if (!dateString) return ''; const [year, month, day] = dateString.split('-'); return `${day}.${month}.${year}`; };
-    const showModal = (evrak) => { document.getElementById('modalTitle').textContent = evrak.konu; document.getElementById('pdfObject').data = evrak.dosyaBase64; document.getElementById('modal').style.display = 'block'; document.getElementById('pdfModalBackdrop').style.display = 'block'; };
-    const hideModal = () => { document.getElementById('modal').style.display = 'none'; document.getElementById('pdfModalBackdrop').style.display = 'none'; document.getElementById('pdfObject').data = ''; };
-
-    // PDF okuma event listener'ını global scope'a taşıyalım
-    // Bu kısım DOMContentLoaded içinde olmalı, ama basitlik için buraya taşıyorum
-    // Daha iyi bir yapı için tüm script'i DOMContentLoaded içinde tutmak gerekir.
-    // Ancak mevcut yapı çalışacaktır.
-    document.getElementById('pdfDosya').addEventListener('change', async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        const konuInput = document.getElementById('konu');
-        const gelisTarihiInput = document.getElementById('gelisTarihi');
-        const evrakSayisiInput = document.getElementById('evrakSayisi');
-        
-        konuInput.value = '';
-        gelisTarihiInput.value = '';
-        evrakSayisiInput.value = '';
-        
-        try {
-            const text = await pdfMetniniCikar(file);
-            const tarihRegex = /(\d{2})\.(\d{2})\.(\d{4})/;
-            const tarihMatch = text.match(tarihRegex);
-            if (tarihMatch) {
-                const [_, day, month, year] = tarihMatch;
-                gelisTarihiInput.value = `${year}-${month}-${day}`;
-            }
-            const sayiRegex = /Sayı\s*:\s*(.*)/i;
-            const sayiMatch = text.match(sayiRegex);
-            if (sayiMatch) {
-                evrakSayisiInput.value = sayiMatch[1].trim();
-            }
-            const konuRegex = /Konu\s*:\s*(.*)/i;
-            const konuMatch = text.match(konuRegex);
-            if (konuMatch) {
-                konuInput.value = konuMatch[1].trim();
-            }
-            window.seciliDosyaBase64 = await dosyayiBase64eCevir(file);
-        } catch (error) {
-            console.error("PDF okuma hatası:", error);
-            alert("PDF dosyası okunurken bir hata oluştu.");
-        }
-    });
-
     </script>
 </body>
 </html>
