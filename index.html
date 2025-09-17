@@ -279,7 +279,18 @@
                     const data = await response.json();
                     evraklarSha = data.sha;
                     const content = atob(data.content);
-                    evraklar = JSON.parse(content);
+                    // DÜZELTME: Dosya içeriği boşsa veya bozuksa hata vermesini engelle
+                    if (content) {
+                        try {
+                            evraklar = JSON.parse(content);
+                        } catch (e) {
+                            console.error("JSON parse hatası:", e);
+                            alert("GitHub'daki evraklar.json dosyası bozuk veya okunamıyor. Liste boş olarak başlatılacak.");
+                            evraklar = []; // Hata durumunda listeyi boşalt
+                        }
+                    } else {
+                        evraklar = []; // Dosya boşsa listeyi boşalt
+                    }
                 } else {
                     const errorData = await response.json();
                     let userMessage = `GitHub API Hatası: ${errorData.message}`;
@@ -300,6 +311,7 @@
         const saveEvraklarToGithub = async () => {
             showLoader('Değişiklikler GitHub\'a kaydediliyor...');
             try {
+                // JSON.stringify'daki null, 2 parametresi okunabilirliği artırmak için JSON'ı formatlar
                 const content = btoa(unescape(encodeURIComponent(JSON.stringify(evraklar, null, 2))));
                 const body = {
                     message: `Evrak listesi güncellendi - ${new Date().toISOString()}`,
@@ -321,7 +333,6 @@
                 } else {
                     const errorData = await response.json();
                     let userMessage = `GitHub API Hatası: ${errorData.message}`;
-                    // Geliştirilmiş hata mesajı
                     if (errorData.message.includes('Resource not accessible')) {
                          userMessage = 'GitHub API Hatası: Lütfen GitHub Personal Access Token\'ınızın depoya yazma (repo scope) yetkisi olduğundan emin olun.';
                     }
