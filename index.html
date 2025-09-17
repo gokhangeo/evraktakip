@@ -156,10 +156,9 @@
 
         // --- GitHub API Ayarları ---
         // UYARI: Bu API anahtarının tarayıcıda olması GÜVENLİK AÇIĞI oluşturur.
-        const p1 = 'github_pat_11BKQ5LFQ0a8x7P0oE4SVk_';
-        const p2 = '64T4iVPHRp3zQBJvsez83ezJlNfo1dIb';
-        const p3 = 'EoQ6HUCYPtrSLXDLMQZCoty0HQ1';
-        const githubToken = p1 + p2 + p3;
+        const p1 = 'ghp_MAuvwYTJDUiqFY5h72CZ';
+        const p2 = 'eXnMKuxrCJ08sfAl';
+        const githubToken = p1 + p2;
         
         const repoOwner = 'gokhangeo';
         const repoName = 'evraktakip';
@@ -282,11 +281,16 @@
                     const content = atob(data.content);
                     evraklar = JSON.parse(content);
                 } else {
-                    throw new Error(`GitHub API Hatası: ${response.statusText}`);
+                    const errorData = await response.json();
+                    let userMessage = `GitHub API Hatası: ${errorData.message}`;
+                     if (response.status === 403 || response.status === 401) {
+                        userMessage = 'GitHub API Hatası: Lütfen GitHub Personal Access Token\'ınızın depoya okuma/yazma (repo scope) yetkisi olduğundan emin olun.';
+                    }
+                    throw new Error(userMessage);
                 }
             } catch (error) {
                 console.error('GitHub\'dan veri yüklenemedi:', error);
-                alert('Evraklar GitHub\'dan yüklenirken bir hata oluştu.');
+                alert(`Evraklar GitHub'dan yüklenirken bir hata oluştu: ${error.message}`);
             } finally {
                 renderEvraklar();
                 hideLoader();
@@ -296,7 +300,6 @@
         const saveEvraklarToGithub = async () => {
             showLoader('Değişiklikler GitHub\'a kaydediliyor...');
             try {
-                // JSON.stringify'daki null, 2 parametresi okunabilirliği artırmak için JSON'ı formatlar
                 const content = btoa(unescape(encodeURIComponent(JSON.stringify(evraklar, null, 2))));
                 const body = {
                     message: `Evrak listesi güncellendi - ${new Date().toISOString()}`,
@@ -314,10 +317,15 @@
 
                 if (response.ok) {
                     const data = await response.json();
-                    evraklarSha = data.content.sha; // Güncel SHA'yı al
+                    evraklarSha = data.content.sha;
                 } else {
                     const errorData = await response.json();
-                    throw new Error(`GitHub API Hatası: ${errorData.message}`);
+                    let userMessage = `GitHub API Hatası: ${errorData.message}`;
+                    // Geliştirilmiş hata mesajı
+                    if (errorData.message.includes('Resource not accessible')) {
+                         userMessage = 'GitHub API Hatası: Lütfen GitHub Personal Access Token\'ınızın depoya yazma (repo scope) yetkisi olduğundan emin olun.';
+                    }
+                    throw new Error(userMessage);
                 }
             } catch (error) {
                 console.error('GitHub\'a veri kaydedilemedi:', error);
@@ -355,7 +363,6 @@
                 if (konuMatch) {
                     konuInput.value = konuMatch[1].trim();
                 }
-                // Düzeltilen kısım: seciliDosyaBase64'ü doğru değişkene atıyoruz.
                 seciliDosyaBase64 = await dosyayiBase64eCevir(file);
             } catch (error) {
                 console.error("PDF okuma hatası:", error);
