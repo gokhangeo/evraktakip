@@ -318,7 +318,13 @@
 
             while (attempts < maxAttempts) {
                 try {
-                    const response = await fetch(`${apiUrl}?t=${new Date().getTime()}`);
+                    // DÜZELTME: Bu fetch isteğine kimlik doğrulama başlığı eklendi.
+                    const response = await fetch(`${apiUrl}?t=${new Date().getTime()}`, {
+                         headers: { 
+                            'Authorization': `token ${githubToken}`, 
+                            'Accept': 'application/vnd.github.v3+json'
+                        }
+                    });
                     if (response.ok) {
                         const data = await response.json();
                         if (data.sha === targetSha) {
