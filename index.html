@@ -268,9 +268,13 @@
         const loadEvraklarFromGithub = async () => {
             showLoader('Evraklar GitHub\'dan yükleniyor...');
             try {
-                // DÜZELTME: Tarayıcı önbelleğini atlamak için URL'ye zaman damgası eklendi.
+                // HATA DÜZELTMESİ: 'Failed to fetch' hatasını çözmek için 'Cache-Control' başlığı kaldırıldı.
+                // Zaman damgası tek başına önbelleği atlamak için yeterli olmalıdır.
                 const response = await fetch(`${apiUrl}?t=${new Date().getTime()}`, {
-                    headers: { 'Authorization': `token ${githubToken}`, 'Accept': 'application/vnd.github.v3+json' }
+                    headers: { 
+                        'Authorization': `token ${githubToken}`, 
+                        'Accept': 'application/vnd.github.v3+json'
+                    }
                 });
                 if (response.status === 404) {
                     console.log('evraklar.json bulunamadı. Yeni bir tane oluşturulacak.');
@@ -302,6 +306,7 @@
             } catch (error) {
                 console.error('GitHub\'dan veri yüklenemedi:', error);
                 alert(`Evraklar GitHub'dan yüklenirken bir hata oluştu: ${error.message}`);
+                evraklar = []; // Hata durumunda listeyi her zaman boşalt ve render et
             } finally {
                 renderEvraklar();
                 hideLoader();
