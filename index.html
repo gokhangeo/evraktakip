@@ -268,8 +268,6 @@
         const loadEvraklarFromGithub = async () => {
             showLoader('Evraklar GitHub\'dan yükleniyor...');
             try {
-                // HATA DÜZELTMESİ: 'Failed to fetch' hatasını çözmek için 'Cache-Control' başlığı kaldırıldı.
-                // Zaman damgası tek başına önbelleği atlamak için yeterli olmalıdır.
                 const response = await fetch(`${apiUrl}?t=${new Date().getTime()}`, {
                     headers: { 
                         'Authorization': `token ${githubToken}`, 
@@ -290,10 +288,10 @@
                         } catch (e) {
                             console.error("JSON parse hatası:", e);
                             alert("GitHub'daki evraklar.json dosyası bozuk veya okunamıyor. Liste boş olarak başlatılacak.");
-                            evraklar = []; // Hata durumunda listeyi boşalt
+                            evraklar = [];
                         }
                     } else {
-                        evraklar = []; // Dosya boşsa listeyi boşalt
+                        evraklar = [];
                     }
                 } else {
                     const errorData = await response.json();
@@ -306,17 +304,47 @@
             } catch (error) {
                 console.error('GitHub\'dan veri yüklenemedi:', error);
                 alert(`Evraklar GitHub'dan yüklenirken bir hata oluştu: ${error.message}`);
-                evraklar = []; // Hata durumunda listeyi her zaman boşalt ve render et
+                evraklar = [];
             } finally {
                 renderEvraklar();
                 hideLoader();
             }
         };
+        
+        // YENİ FONKSİYON: Kaydedilen verinin sunucuda güncellendiğini doğrulamak için bekler.
+        const confirmDataIsSynced = async (targetSha) => {
+            let attempts = 0;
+            const maxAttempts = 10; // En fazla 10 saniye bekle
+            const delay = 1000; // Her deneme arası 1 saniye
+
+            while (attempts < maxAttempts) {
+                try {
+                    const response = await fetch(`${apiUrl}?t=${new Date().getTime()}`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.sha === targetSha) {
+                            console.log(`Senkronizasyon başarılı! SHA: ${targetSha}`);
+                            // Global değişkenleri sunucudan gelen son veriyle güncelle
+                            evraklarSha = data.sha;
+                            const content = atob(data.content);
+                            evraklar = content ? JSON.parse(content) : [];
+                            return; // Döngüden çık
+                        }
+                    }
+                } catch (e) {
+                    console.error("Doğrulama denemesi başarısız:", e);
+                }
+                attempts++;
+                await new Promise(resolve => setTimeout(resolve, delay));
+            }
+            console.warn("Veri senkronizasyonu zaman aşımına uğradı. Arayüz yerel veriyi gösteriyor olabilir.");
+            // Zaman aşımına uğrarsa, en azından SHA'yı güncelle ki bir sonraki kayıt işlemi başarısız olmasın
+            evraklarSha = targetSha;
+        };
 
         const saveEvraklarToGithub = async () => {
             showLoader('Değişiklikler GitHub\'a kaydediliyor...');
             try {
-                // JSON.stringify'daki null, 2 parametresi okunabilirliği artırmak için JSON'ı formatlar
                 const content = btoa(unescape(encodeURIComponent(JSON.stringify(evraklar, null, 2))));
                 const body = {
                     message: `Evrak listesi güncellendi - ${new Date().toISOString()}`,
@@ -334,7 +362,10 @@
 
                 if (response.ok) {
                     const data = await response.json();
-                    evraklarSha = data.content.sha;
+                    const newSha = data.content.sha;
+                    // GÜNCELLEME: Kayıt sonrası senkronizasyon bekleme adımı eklendi
+                    showLoader('Değişiklikler kaydedildi. Veri senkronizasyonu bekleniyor...');
+                    await confirmDataIsSynced(newSha);
                 } else {
                     const errorData = await response.json();
                     let userMessage = `GitHub API Hatası: ${errorData.message}`;
@@ -347,6 +378,7 @@
                 console.error('GitHub\'a veri kaydedilemedi:', error);
                 alert(`Değişiklikler GitHub'a kaydedilirken bir hata oluştu: ${error.message}`);
             } finally {
+                // confirmDataIsSynced fonksiyonu listeyi zaten güncellediği için sadece render ediyoruz.
                 renderEvraklar();
                 hideLoader();
             }
