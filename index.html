@@ -149,7 +149,7 @@
         const loader = document.getElementById('loader');
         
         const modalBackdrop = document.getElementById('pdfModalBackdrop');
-        const modal = document.getElementById('modal');
+        const modal = document.getElementById('pdfModal');
         const closeModalBtn = document.getElementById('closeModal');
         const modalTitle = document.getElementById('modalTitle');
         const pdfObject = document.getElementById('pdfObject');
@@ -268,7 +268,8 @@
         const loadEvraklarFromGithub = async () => {
             showLoader('Evraklar GitHub\'dan yükleniyor...');
             try {
-                const response = await fetch(apiUrl, {
+                // DÜZELTME: Tarayıcı önbelleğini atlamak için URL'ye zaman damgası eklendi.
+                const response = await fetch(`${apiUrl}?t=${new Date().getTime()}`, {
                     headers: { 'Authorization': `token ${githubToken}`, 'Accept': 'application/vnd.github.v3+json' }
                 });
                 if (response.status === 404) {
@@ -279,7 +280,6 @@
                     const data = await response.json();
                     evraklarSha = data.sha;
                     const content = atob(data.content);
-                    // DÜZELTME: Dosya içeriği boşsa veya bozuksa hata vermesini engelle
                     if (content) {
                         try {
                             evraklar = JSON.parse(content);
