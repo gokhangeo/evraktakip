@@ -41,6 +41,10 @@
             z-index: 100;
             font-weight: 500;
         }
+        .klasor-item.active {
+            background-color: #3b82f6;
+            color: white;
+        }
     </style>
 </head>
 <body class="bg-gray-100 text-gray-800">
@@ -63,6 +67,10 @@
                         <input type="file" id="pdfDosya" name="pdfDosya" accept=".pdf" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
                     </div>
                     <div>
+                        <label for="klasor" class="block text-sm font-medium text-gray-600">Klasör Adı</label>
+                        <input type="text" id="klasor" name="klasor" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm" placeholder="Örn: İmar Planları">
+                    </div>
+                    <div>
                         <label for="konu" class="block text-sm font-medium text-gray-600">Konu / Başlık (Otomatik)</label>
                         <input type="text" id="konu" name="konu" class="mt-1 block w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-md shadow-sm">
                     </div>
@@ -76,11 +84,11 @@
                     </div>
                     <div>
                         <label for="sonCevapTarihi" class="block text-sm font-medium text-gray-600">Son Cevap Tarihi (Otomatik)</label>
-                        <input type="date" id="sonCevapTarihi" name="sonCevapTarihi" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" required>
+                        <input type="date" id="sonCevapTarihi" name="sonCevapTarihi" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm" required>
                     </div>
                      <div>
                         <label for="durum" class="block text-sm font-medium text-gray-600">Durum</label>
-                        <select id="durum" name="durum" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                        <select id="durum" name="durum" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm">
                             <option value="Bekliyor">Bekliyor</option>
                             <option value="İşlemde">İşlemde</option>
                             <option value="Cevaplandı">Cevaplandı</option>
@@ -88,13 +96,13 @@
                     </div>
                     <div>
                         <label for="notlar" class="block text-sm font-medium text-gray-600">Notlar</label>
-                        <textarea id="notlar" name="notlar" rows="3" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></textarea>
+                        <textarea id="notlar" name="notlar" rows="3" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm"></textarea>
                     </div>
                     <div class="flex space-x-2">
-                        <button type="submit" id="kaydetBtn" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200">
+                        <button type="submit" id="kaydetBtn" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-md hover:bg-blue-700">
                             Evrakı Kaydet
                         </button>
-                        <button type="button" id="iptalBtn" class="w-full bg-gray-200 text-gray-700 font-bold py-2 px-4 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 transition-colors duration-200 hidden">
+                        <button type="button" id="iptalBtn" class="w-full bg-gray-200 text-gray-700 font-bold py-2 px-4 rounded-md hover:bg-gray-300 hidden">
                             İptal
                         </button>
                     </div>
@@ -105,8 +113,17 @@
             <div class="lg:col-span-2 bg-white p-6 rounded-lg shadow-md">
                 <div class="flex justify-between items-center mb-4 border-b pb-2">
                     <h2 class="text-xl font-semibold">Kayıtlı Evraklar</h2>
-                    <input type="text" id="arama" placeholder="Konu veya evrak sayısına göre ara..." class="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                    <input type="text" id="arama" placeholder="Konu veya evrak sayısına göre ara..." class="px-3 py-2 border border-gray-300 rounded-md shadow-sm">
                 </div>
+
+                <!-- Klasör Listesi -->
+                 <div class="mb-4">
+                    <h3 class="text-lg font-semibold mb-2 text-gray-600">Dosya Klasörleri</h3>
+                    <div id="klasorListesi" class="flex flex-wrap gap-2">
+                        <!-- Klasörler buraya eklenecek -->
+                    </div>
+                </div>
+
                 <div class="overflow-x-auto">
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
@@ -160,6 +177,7 @@
         const evrakFormu = document.getElementById('evrakFormu');
         const pdfDosyaInput = document.getElementById('pdfDosya');
         const pdfInputContainer = document.getElementById('pdfInputContainer');
+        const klasorInput = document.getElementById('klasor');
         const konuInput = document.getElementById('konu');
         const gelisTarihiInput = document.getElementById('gelisTarihi');
         const evrakSayisiInput = document.getElementById('evrakSayisi');
@@ -167,6 +185,7 @@
         const durumInput = document.getElementById('durum');
         const notlarInput = document.getElementById('notlar');
         const evrakListesiBody = document.getElementById('evrakListesi');
+        const klasorListesi = document.getElementById('klasorListesi');
         const aramaInput = document.getElementById('arama');
         const loader = document.getElementById('loader');
         const kaydetBtn = document.getElementById('kaydetBtn');
@@ -202,6 +221,7 @@
         let evraklarSha = null;
         let seciliDosyaBase64 = null;
         let editingEvrakId = null;
+        let seciliKlasor = 'all';
 
         // --- Yardımcı Fonksiyonlar ---
         const showLoader = (message) => { loader.textContent = message; loader.style.display = 'block'; };
@@ -285,21 +305,48 @@
 
 
         // --- Ana Fonksiyonlar ---
+        const renderKlasorler = () => {
+            const tumKlasorler = [...new Set(evraklar.map(e => e.klasor).filter(Boolean))];
+            klasorListesi.innerHTML = '';
+
+            const createKlasorButton = (name, value) => {
+                const button = document.createElement('button');
+                button.textContent = name;
+                button.dataset.klasor = value;
+                button.className = `klasor-item px-3 py-1 text-sm font-medium rounded-full cursor-pointer transition-colors duration-200 ${seciliKlasor === value ? 'active' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`;
+                return button;
+            };
+            
+            klasorListesi.appendChild(createKlasorButton('Tüm Evraklar', 'all'));
+            tumKlasorler.sort().forEach(klasor => {
+                klasorListesi.appendChild(createKlasorButton(klasor, klasor));
+            });
+        };
+        
         const renderEvraklar = (filter = '') => {
             evrakListesiBody.innerHTML = '';
-            const filtrelenmisEvraklar = evraklar.filter(evrak => {
-                const aramaTerimi = filter.toLowerCase();
-                const konuEslesmesi = evrak.konu.toLowerCase().includes(aramaTerimi);
-                const sayiEslesmesi = evrak.evrakSayisi && evrak.evrakSayisi.toLowerCase().includes(aramaTerimi);
-                return konuEslesmesi || sayiEslesmesi;
-            });
+            
+            let goruntulenecekEvraklar = evraklar;
 
-            if (filtrelenmisEvraklar.length === 0) {
-                 evrakListesiBody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-gray-500">Kayıtlı evrak bulunamadı.</td></tr>`;
+            if (seciliKlasor !== 'all') {
+                goruntulenecekEvraklar = goruntulenecekEvraklar.filter(evrak => evrak.klasor === seciliKlasor);
+            }
+
+            if (filter) {
+                goruntulenecekEvraklar = goruntulenecekEvraklar.filter(evrak => {
+                    const aramaTerimi = filter.toLowerCase();
+                    const konuEslesmesi = evrak.konu.toLowerCase().includes(aramaTerimi);
+                    const sayiEslesmesi = evrak.evrakSayisi && evrak.evrakSayisi.toLowerCase().includes(aramaTerimi);
+                    return konuEslesmesi || sayiEslesmesi;
+                });
+            }
+
+            if (goruntulenecekEvraklar.length === 0) {
+                 evrakListesiBody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-gray-500">Bu kritere uygun evrak bulunamadı.</td></tr>`;
                  return;
             }
 
-            filtrelenmisEvraklar.forEach(evrak => {
+            goruntulenecekEvraklar.forEach(evrak => {
                 const tr = document.createElement('tr');
                 const durumRenkleri = {
                     'Bekliyor': 'bg-blue-100 text-blue-800',
@@ -359,7 +406,7 @@
                 }
             } catch (error) {
                 alert(`Evraklar yüklenirken bir hata oluştu: ${error.message}`); evraklar = [];
-            } finally { renderEvraklar(); hideLoader(); }
+            } finally { renderKlasorler(); renderEvraklar(); hideLoader(); }
         };
         
         const confirmDataIsSynced = async (targetSha) => {
@@ -409,7 +456,7 @@
                 }
             } catch (error) {
                 alert(`Değişiklikler kaydedilirken bir hata oluştu: ${error.message}`);
-            } finally { renderEvraklar(); hideLoader(); }
+            } finally { renderKlasorler(); renderEvraklar(aramaInput.value); hideLoader(); }
         };
 
         // --- Olay Dinleyicileri (Event Listeners) ---
@@ -451,10 +498,12 @@
 
         evrakFormu.addEventListener('submit', async (e) => {
             e.preventDefault();
+            const klasorDegeri = klasorInput.value.trim();
             if (editingEvrakId) { // Düzenleme modu
                 const evrak = evraklar.find(ev => ev.id === editingEvrakId);
                 if(evrak){
                     evrak.konu = konuInput.value;
+                    evrak.klasor = klasorDegeri;
                     evrak.gelisTarihi = gelisTarihiInput.value;
                     evrak.evrakSayisi = evrakSayisiInput.value;
                     evrak.sonCevapTarihi = sonCevapTarihiInput.value;
@@ -464,7 +513,7 @@
             } else { // Yeni kayıt modu
                 if (!seciliDosyaBase64) { alert('Lütfen bir PDF dosyası seçin.'); return; }
                 const yeniEvrak = {
-                    id: Date.now(), konu: konuInput.value, gelisTarihi: gelisTarihiInput.value,
+                    id: Date.now(), konu: konuInput.value, klasor: klasorDegeri, gelisTarihi: gelisTarihiInput.value,
                     evrakSayisi: evrakSayisiInput.value, sonCevapTarihi: sonCevapTarihiInput.value,
                     durum: durumInput.value, notlar: notlarInput.value, dosyaBase64: seciliDosyaBase64
                 };
@@ -476,6 +525,14 @@
         
         iptalBtn.addEventListener('click', formuTemizle);
         aramaInput.addEventListener('input', (e) => { renderEvraklar(e.target.value); });
+        
+        klasorListesi.addEventListener('click', (e) => {
+            if(e.target.classList.contains('klasor-item')) {
+                seciliKlasor = e.target.dataset.klasor;
+                renderKlasorler();
+                renderEvraklar(aramaInput.value);
+            }
+        });
 
         evrakListesiBody.addEventListener('click', async (e) => {
             e.preventDefault();
@@ -501,6 +558,7 @@
             else if (targetLink.classList.contains('edit-evrak')){
                 editingEvrakId = evrak.id;
                 konuInput.value = evrak.konu;
+                klasorInput.value = evrak.klasor || '';
                 gelisTarihiInput.value = evrak.gelisTarihi;
                 evrakSayisiInput.value = evrak.evrakSayisi;
                 sonCevapTarihiInput.value = evrak.sonCevapTarihi;
