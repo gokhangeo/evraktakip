@@ -56,23 +56,23 @@
         <main class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <!-- Sol Taraf: Evrak Yükleme Formu -->
             <div class="lg:col-span-1 bg-white p-6 rounded-lg shadow-md h-fit">
-                <h2 class="text-xl font-semibold mb-4 border-b pb-2">Yeni Evrak Ekle</h2>
+                <h2 id="formBasligi" class="text-xl font-semibold mb-4 border-b pb-2">Yeni Evrak Ekle</h2>
                 <form id="evrakFormu" class="space-y-4">
-                    <div>
+                    <div id="pdfInputContainer">
                         <label for="pdfDosya" class="block text-sm font-medium text-gray-600 mb-1">PDF Dosyası Seç</label>
-                        <input type="file" id="pdfDosya" name="pdfDosya" accept=".pdf" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" required>
+                        <input type="file" id="pdfDosya" name="pdfDosya" accept=".pdf" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
                     </div>
                     <div>
                         <label for="konu" class="block text-sm font-medium text-gray-600">Konu / Başlık (Otomatik)</label>
-                        <input type="text" id="konu" name="konu" class="mt-1 block w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-md shadow-sm" readonly>
+                        <input type="text" id="konu" name="konu" class="mt-1 block w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-md shadow-sm">
                     </div>
                     <div>
                         <label for="gelisTarihi" class="block text-sm font-medium text-gray-600">Geliş Tarihi (Otomatik)</label>
-                        <input type="date" id="gelisTarihi" name="gelisTarihi" class="mt-1 block w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-md shadow-sm" readonly>
+                        <input type="date" id="gelisTarihi" name="gelisTarihi" class="mt-1 block w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-md shadow-sm">
                     </div>
                     <div>
                         <label for="evrakSayisi" class="block text-sm font-medium text-gray-600">Evrak Sayısı (Otomatik)</label>
-                        <input type="text" id="evrakSayisi" name="evrakSayisi" class="mt-1 block w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-md shadow-sm" readonly>
+                        <input type="text" id="evrakSayisi" name="evrakSayisi" class="mt-1 block w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-md shadow-sm">
                     </div>
                     <div>
                         <label for="sonCevapTarihi" class="block text-sm font-medium text-gray-600">Son Cevap Tarihi (Otomatik)</label>
@@ -90,9 +90,14 @@
                         <label for="notlar" class="block text-sm font-medium text-gray-600">Notlar</label>
                         <textarea id="notlar" name="notlar" rows="3" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></textarea>
                     </div>
-                    <button type="submit" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200">
-                        Evrakı Kaydet
-                    </button>
+                    <div class="flex space-x-2">
+                        <button type="submit" id="kaydetBtn" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200">
+                            Evrakı Kaydet
+                        </button>
+                        <button type="button" id="iptalBtn" class="w-full bg-gray-200 text-gray-700 font-bold py-2 px-4 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 transition-colors duration-200 hidden">
+                            İptal
+                        </button>
+                    </div>
                 </form>
             </div>
 
@@ -107,6 +112,7 @@
                         <thead class="bg-gray-50">
                             <tr>
                                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Konu</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Evrak Sayısı</th>
                                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Geliş Tarihi</th>
                                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Son Cevap Tarihi</th>
                                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Durum</th>
@@ -132,7 +138,8 @@
             <button id="closeModal" class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
         </div>
         <div id="pdfViewer" class="overflow-auto h-full p-2">
-            <object id="pdfObject" type="application/pdf" class="w-full" style="height: calc(100% - 10px);"></object>
+            <!-- DEĞİŞİKLİK: <object> yerine <iframe> kullanıldı -->
+            <iframe id="pdfFrame" class="w-full" style="height: calc(100% - 10px); border: none;"></iframe>
         </div>
     </div>
 
@@ -141,21 +148,28 @@
         // --- Element Referansları ---
         const evrakFormu = document.getElementById('evrakFormu');
         const pdfDosyaInput = document.getElementById('pdfDosya');
+        const pdfInputContainer = document.getElementById('pdfInputContainer');
         const konuInput = document.getElementById('konu');
         const gelisTarihiInput = document.getElementById('gelisTarihi');
         const evrakSayisiInput = document.getElementById('evrakSayisi');
+        const sonCevapTarihiInput = document.getElementById('sonCevapTarihi');
+        const durumInput = document.getElementById('durum');
+        const notlarInput = document.getElementById('notlar');
         const evrakListesiBody = document.getElementById('evrakListesi');
         const aramaInput = document.getElementById('arama');
         const loader = document.getElementById('loader');
+        const kaydetBtn = document.getElementById('kaydetBtn');
+        const iptalBtn = document.getElementById('iptalBtn');
+        const formBasligi = document.getElementById('formBasligi');
         
         const modalBackdrop = document.getElementById('pdfModalBackdrop');
         const modal = document.getElementById('pdfModal');
         const closeModalBtn = document.getElementById('closeModal');
         const modalTitle = document.getElementById('modalTitle');
-        const pdfObject = document.getElementById('pdfObject');
+        // DEĞİŞİKLİK: pdfObject referansı pdfFrame olarak güncellendi
+        const pdfFrame = document.getElementById('pdfFrame');
 
         // --- GitHub API Ayarları ---
-        // UYARI: Bu API anahtarının tarayıcıda olması GÜVENLİK AÇIĞI oluşturur.
         const p1 = 'ghp_MAuvwYTJDUiqFY5h72CZ';
         const p2 = 'eXnMKuxrCJ08sfAl';
         const githubToken = p1 + p2;
@@ -170,24 +184,35 @@
         let evraklar = [];
         let evraklarSha = null;
         let seciliDosyaBase64 = null;
+        let editingEvrakId = null;
 
         // --- Yardımcı Fonksiyonlar ---
-        const showLoader = (message) => {
-            loader.textContent = message;
-            loader.style.display = 'block';
-        };
-        const hideLoader = () => {
-            loader.style.display = 'none';
-        };
+        const showLoader = (message) => { loader.textContent = message; loader.style.display = 'block'; };
+        const hideLoader = () => { loader.style.display = 'none'; };
         const formatDate = (dateString) => {
             if (!dateString) return '';
             const [year, month, day] = dateString.split('-');
             return `${day}.${month}.${year}`;
         };
+        
+        const utf8_to_b64 = (str) => {
+            return btoa(unescape(encodeURIComponent(str)));
+        }
+        const b64_to_utf8 = (str) => {
+            return decodeURIComponent(escape(atob(str)));
+        }
+
         const formuTemizle = () => {
             evrakFormu.reset();
             seciliDosyaBase64 = null;
+            editingEvrakId = null;
+            formBasligi.textContent = 'Yeni Evrak Ekle';
+            kaydetBtn.textContent = 'Evrakı Kaydet';
+            iptalBtn.classList.add('hidden');
+            pdfDosyaInput.required = true;
+            pdfInputContainer.classList.remove('hidden');
         };
+
         const dosyayiBase64eCevir = (file) => {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
@@ -211,23 +236,23 @@
                             fullText += textContent.items.map(item => item.str).join('\n');
                         }
                         resolve(fullText);
-                    } catch (error) {
-                        reject(error);
-                    }
+                    } catch (error) { reject(error); }
                 };
                 fileReader.onerror = reject;
             });
         };
         const showModal = (evrak) => {
             modalTitle.textContent = evrak.konu;
-            pdfObject.data = evrak.dosyaBase64;
+            // DEĞİŞİKLİK: .data yerine .src kullanıldı
+            pdfFrame.src = evrak.dosyaBase64;
             modal.style.display = 'block';
             modalBackdrop.style.display = 'block';
         };
         const hideModal = () => {
             modal.style.display = 'none';
             modalBackdrop.style.display = 'none';
-            pdfObject.data = '';
+            // DEĞİŞİKLİK: .data yerine .src kullanıldı
+            pdfFrame.src = '';
         };
 
 
@@ -239,7 +264,7 @@
             );
 
             if (filtrelenmisEvraklar.length === 0) {
-                 evrakListesiBody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-gray-500">Kayıtlı evrak bulunamadı.</td></tr>`;
+                 evrakListesiBody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-gray-500">Kayıtlı evrak bulunamadı.</td></tr>`;
                  return;
             }
 
@@ -252,11 +277,13 @@
                 };
                 tr.innerHTML = `
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${evrak.konu}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${evrak.evrakSayisi}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatDate(evrak.gelisTarihi)}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatDate(evrak.sonCevapTarihi)}</td>
                     <td class="px-6 py-4 whitespace-nowrap"><span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${durumRenkleri[evrak.durum] || 'bg-gray-100 text-gray-800'}">${evrak.durum}</span></td>
                     <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <a href="#" class="text-blue-600 hover:text-blue-900 view-pdf" data-id="${evrak.id}">Görüntüle</a>
+                        <a href="#" class="text-green-600 hover:text-green-900 ml-4 edit-evrak" data-id="${evrak.id}">Düzenle</a>
                         <a href="#" class="text-red-600 hover:text-red-900 ml-4 delete-evrak" data-id="${evrak.id}">Sil</a>
                     </td>
                 `;
@@ -269,75 +296,44 @@
             showLoader('Evraklar GitHub\'dan yükleniyor...');
             try {
                 const response = await fetch(`${apiUrl}?t=${new Date().getTime()}`, {
-                    headers: { 
-                        'Authorization': `token ${githubToken}`, 
-                        'Accept': 'application/vnd.github.v3+json'
-                    }
+                    headers: { 'Authorization': `token ${githubToken}`, 'Accept': 'application/vnd.github.v3+json' }
                 });
                 if (response.status === 404) {
-                    console.log('evraklar.json bulunamadı. Yeni bir tane oluşturulacak.');
-                    evraklar = [];
-                    evraklarSha = null;
+                    evraklar = []; evraklarSha = null;
                 } else if (response.ok) {
                     const data = await response.json();
                     evraklarSha = data.sha;
-                    const content = atob(data.content);
+                    const content = b64_to_utf8(data.content);
                     if (content) {
-                        try {
-                            evraklar = JSON.parse(content);
-                        } catch (e) {
-                            console.error("JSON parse hatası:", e);
-                            alert("GitHub'daki evraklar.json dosyası bozuk veya okunamıyor. Liste boş olarak başlatılacak.");
-                            evraklar = [];
-                        }
-                    } else {
-                        evraklar = [];
-                    }
+                        try { evraklar = JSON.parse(content); } 
+                        catch (e) { alert("GitHub'daki evraklar.json dosyası bozuk. Liste boş başlatılacak."); evraklar = []; }
+                    } else { evraklar = []; }
                 } else {
                     const errorData = await response.json();
-                    let userMessage = `GitHub API Hatası: ${errorData.message}`;
-                     if (response.status === 403 || response.status === 401) {
-                        userMessage = 'GitHub API Hatası: Lütfen GitHub Personal Access Token\'ınızın depoya okuma/yazma (repo scope) yetkisi olduğundan emin olun.';
-                    }
-                    throw new Error(userMessage);
+                    throw new Error(`GitHub API Hatası: ${errorData.message}`);
                 }
             } catch (error) {
-                console.error('GitHub\'dan veri yüklenemedi:', error);
-                alert(`Evraklar GitHub'dan yüklenirken bir hata oluştu: ${error.message}`);
-                evraklar = [];
-            } finally {
-                renderEvraklar();
-                hideLoader();
-            }
+                alert(`Evraklar yüklenirken bir hata oluştu: ${error.message}`); evraklar = [];
+            } finally { renderEvraklar(); hideLoader(); }
         };
         
         const confirmDataIsSynced = async (targetSha) => {
-            let attempts = 0;
-            const maxAttempts = 10; 
-            const delay = 1000; 
-
+            let attempts = 0; const maxAttempts = 10; const delay = 1000; 
             while (attempts < maxAttempts) {
                 try {
-                    // DÜZELTME: Bu fetch isteğine kimlik doğrulama başlığı eklendi.
                     const response = await fetch(`${apiUrl}?t=${new Date().getTime()}`, {
-                         headers: { 
-                            'Authorization': `token ${githubToken}`, 
-                            'Accept': 'application/vnd.github.v3+json'
-                        }
+                         headers: { 'Authorization': `token ${githubToken}`, 'Accept': 'application/vnd.github.v3+json' }
                     });
                     if (response.ok) {
                         const data = await response.json();
                         if (data.sha === targetSha) {
-                            console.log(`Senkronizasyon başarılı! SHA: ${targetSha}`);
                             evraklarSha = data.sha;
-                            const content = atob(data.content);
+                            const content = b64_to_utf8(data.content);
                             evraklar = content ? JSON.parse(content) : [];
                             return; 
                         }
                     }
-                } catch (e) {
-                    console.error("Doğrulama denemesi başarısız:", e);
-                }
+                } catch (e) { console.error("Doğrulama denemesi başarısız:", e); }
                 attempts++;
                 await new Promise(resolve => setTimeout(resolve, delay));
             }
@@ -348,14 +344,9 @@
         const saveEvraklarToGithub = async () => {
             showLoader('Değişiklikler GitHub\'a kaydediliyor...');
             try {
-                const content = btoa(unescape(encodeURIComponent(JSON.stringify(evraklar, null, 2))));
-                const body = {
-                    message: `Evrak listesi güncellendi - ${new Date().toISOString()}`,
-                    content: content
-                };
-                if (evraklarSha) {
-                    body.sha = evraklarSha;
-                }
+                const content = utf8_to_b64(JSON.stringify(evraklar, null, 2));
+                const body = { message: `Evrak listesi güncellendi - ${new Date().toISOString()}`, content: content };
+                if (evraklarSha) { body.sha = evraklarSha; }
 
                 const response = await fetch(apiUrl, {
                     method: 'PUT',
@@ -365,72 +356,38 @@
 
                 if (response.ok) {
                     const data = await response.json();
-                    const newSha = data.content.sha;
-                    showLoader('Değişiklikler kaydedildi. Veri senkronizasyonu bekleniyor...');
-                    await confirmDataIsSynced(newSha);
+                    showLoader('Değişiklikler kaydedildi. Senkronizasyon bekleniyor...');
+                    await confirmDataIsSynced(data.content.sha);
                 } else {
                     const errorData = await response.json();
-                    let userMessage = `GitHub API Hatası: ${errorData.message}`;
-                    if (errorData.message.includes('Resource not accessible')) {
-                         userMessage = 'GitHub API Hatası: Lütfen GitHub Personal Access Token\'ınızın depoya yazma (repo scope) yetkisi olduğundan emin olun.';
-                    }
-                    throw new Error(userMessage);
+                    throw new Error(`GitHub API Hatası: ${errorData.message}`);
                 }
             } catch (error) {
-                console.error('GitHub\'a veri kaydedilemedi:', error);
-                alert(`Değişiklikler GitHub'a kaydedilirken bir hata oluştu: ${error.message}`);
-            } finally {
-                renderEvraklar();
-                hideLoader();
-            }
+                alert(`Değişiklikler kaydedilirken bir hata oluştu: ${error.message}`);
+            } finally { renderEvraklar(); hideLoader(); }
         };
 
         // --- Olay Dinleyicileri (Event Listeners) ---
         pdfDosyaInput.addEventListener('change', async (e) => {
             const file = e.target.files[0];
             if (!file) return;
-            
-            // Formu temizle
-            konuInput.value = '';
-            gelisTarihiInput.value = '';
-            evrakSayisiInput.value = '';
-            document.getElementById('sonCevapTarihi').value = '';
-
             try {
                 const text = await pdfMetniniCikar(file);
-
-                // --- Genel Bilgileri Çıkar ---
-                const sayiRegex = /Sayı\s*:\s*(.*)/i;
-                const sayiMatch = text.match(sayiRegex);
+                const sayiRegex = /Sayı\s*:\s*(.*)/i; const sayiMatch = text.match(sayiRegex);
                 if (sayiMatch) { evrakSayisiInput.value = sayiMatch[1].trim(); }
-
-                const konuRegex = /Konu\s*:\s*(.*)/i;
-                const konuMatch = text.match(konuRegex);
+                const konuRegex = /Konu\s*:\s*(.*)/i; const konuMatch = text.match(konuRegex);
                 if (konuMatch) { konuInput.value = konuMatch[1].trim(); }
-
-                // --- Tarihleri Çıkar ---
                 const allDatesRegex = /(\d{2})\.(\d{2})\.(\d{4})/g;
-                
-                // 1. Geliş Tarihi (genellikle metindeki ilk ve en yeni tarih)
                 const allDateMatchesInDoc = text.match(allDatesRegex);
                 if (allDateMatchesInDoc) {
-                    const sortedDates = [...new Set(allDateMatchesInDoc)]
-                        .map(dateStr => {
-                            const [day, month, year] = dateStr.split('.').map(Number);
-                            return new Date(year, month - 1, day);
-                        }).sort((a, b) => b - a);
-                    
-                    if (sortedDates.length > 0) {
-                        const gelisTarihi = sortedDates[0];
-                        gelisTarihiInput.value = gelisTarihi.toISOString().split('T')[0];
-                    }
+                    const sortedDates = [...new Set(allDateMatchesInDoc)].map(dateStr => {
+                        const [day, month, year] = dateStr.split('.').map(Number); return new Date(year, month - 1, day);
+                    }).sort((a, b) => b - a);
+                    if (sortedDates.length > 0) { gelisTarihiInput.value = sortedDates[0].toISOString().split('T')[0]; }
                 }
-
-                // 2. Son Cevap Tarihi ("İlgi" bölümündeki en son tarih)
                 const ilgiRegex = /İlgi\s*:([\s\S]*?)(?=Konu\s*:|\n\n[A-ZÇĞİÖŞÜ])/i;
                 const ilgiMatch = text.match(ilgiRegex);
                 let latestDateInIlgi = null;
-
                 if (ilgiMatch && ilgiMatch[1]) {
                     const ilgiText = ilgiMatch[1];
                     const allDatesInIlgi = ilgiText.match(allDatesRegex);
@@ -438,65 +395,75 @@
                         allDatesInIlgi.forEach(dateStr => {
                             const [day, month, year] = dateStr.split('.').map(Number);
                             const currentDate = new Date(year, month - 1, day);
-                            if (!latestDateInIlgi || currentDate > latestDateInIlgi) {
-                                latestDateInIlgi = currentDate;
-                            }
+                            if (!latestDateInIlgi || currentDate > latestDateInIlgi) { latestDateInIlgi = currentDate; }
                         });
                     }
                 }
-                
-                if (latestDateInIlgi) {
-                    document.getElementById('sonCevapTarihi').value = latestDateInIlgi.toISOString().split('T')[0];
-                }
-                
+                if (latestDateInIlgi) { sonCevapTarihiInput.value = latestDateInIlgi.toISOString().split('T')[0]; }
                 seciliDosyaBase64 = await dosyayiBase64eCevir(file);
-            } catch (error) {
-                console.error("PDF okuma hatası:", error);
-                alert("PDF dosyası okunurken bir hata oluştu.");
-            }
+            } catch (error) { alert("PDF dosyası okunurken bir hata oluştu."); }
         });
 
         evrakFormu.addEventListener('submit', async (e) => {
             e.preventDefault();
-            if (!seciliDosyaBase64) {
-                alert('Lütfen bir PDF dosyası seçin.'); 
-                return;
+            if (editingEvrakId) { // Düzenleme modu
+                const evrak = evraklar.find(ev => ev.id === editingEvrakId);
+                if(evrak){
+                    evrak.konu = konuInput.value;
+                    evrak.gelisTarihi = gelisTarihiInput.value;
+                    evrak.evrakSayisi = evrakSayisiInput.value;
+                    evrak.sonCevapTarihi = sonCevapTarihiInput.value;
+                    evrak.durum = durumInput.value;
+                    evrak.notlar = notlarInput.value;
+                }
+            } else { // Yeni kayıt modu
+                if (!seciliDosyaBase64) { alert('Lütfen bir PDF dosyası seçin.'); return; }
+                const yeniEvrak = {
+                    id: Date.now(), konu: konuInput.value, gelisTarihi: gelisTarihiInput.value,
+                    evrakSayisi: evrakSayisiInput.value, sonCevapTarihi: sonCevapTarihiInput.value,
+                    durum: durumInput.value, notlar: notlarInput.value, dosyaBase64: seciliDosyaBase64
+                };
+                evraklar.push(yeniEvrak);
             }
-            if (!konuInput.value) {
-                alert('Lütfen konu/başlık alanını doldurun.'); 
-                return;
-            }
-
-            const yeniEvrak = {
-                id: Date.now(),
-                konu: konuInput.value,
-                gelisTarihi: gelisTarihiInput.value,
-                evrakSayisi: evrakSayisiInput.value,
-                sonCevapTarihi: document.getElementById('sonCevapTarihi').value,
-                durum: document.getElementById('durum').value,
-                notlar: document.getElementById('notlar').value,
-                dosyaBase64: seciliDosyaBase64
-            };
-
-            evraklar.push(yeniEvrak);
             await saveEvraklarToGithub();
             formuTemizle();
         });
-
+        
+        iptalBtn.addEventListener('click', formuTemizle);
         aramaInput.addEventListener('input', (e) => { renderEvraklar(e.target.value); });
 
         evrakListesiBody.addEventListener('click', async (e) => {
-            if (e.target.classList.contains('view-pdf')) {
-                e.preventDefault();
-                const evrak = evraklar.find(ev => ev.id === parseInt(e.target.dataset.id));
+            e.preventDefault();
+            const target = e.target;
+            const evrakId = parseInt(target.dataset.id);
+
+            if (target.classList.contains('view-pdf')) {
+                const evrak = evraklar.find(ev => ev.id === evrakId);
                 if (evrak) showModal(evrak);
-            }
-            if (e.target.classList.contains('delete-evrak')) {
-                e.preventDefault();
-                if (confirm('Bu evrakı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.')) {
-                    const evrakId = parseInt(e.target.dataset.id);
+            } 
+            else if (target.classList.contains('delete-evrak')) {
+                if (confirm('Bu evrakı silmek istediğinizden emin misiniz?')) {
                     evraklar = evraklar.filter(e => e.id !== evrakId);
                     await saveEvraklarToGithub();
+                }
+            }
+            else if (target.classList.contains('edit-evrak')){
+                const evrak = evraklar.find(ev => ev.id === evrakId);
+                if (evrak) {
+                    editingEvrakId = evrak.id;
+                    konuInput.value = evrak.konu;
+                    gelisTarihiInput.value = evrak.gelisTarihi;
+                    evrakSayisiInput.value = evrak.evrakSayisi;
+                    sonCevapTarihiInput.value = evrak.sonCevapTarihi;
+                    durumInput.value = evrak.durum;
+                    notlarInput.value = evrak.notlar;
+
+                    formBasligi.textContent = 'Evrakı Düzenle';
+                    kaydetBtn.textContent = 'Değişiklikleri Kaydet';
+                    iptalBtn.classList.remove('hidden');
+                    pdfInputContainer.classList.add('hidden'); // PDF değiştirilemez
+                    pdfDosyaInput.required = false;
+                    window.scrollTo(0, 0); // Formu görmek için sayfanın başına git
                 }
             }
         });
