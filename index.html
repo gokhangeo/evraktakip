@@ -155,6 +155,21 @@
          <button id="closeScannerBtn" class="absolute top-5 right-5 text-white text-3xl font-bold">&times;</button>
     </div>
 
+    <!-- Onay Modalı -->
+    <div id="confirmModalBackdrop" class="modal-backdrop"></div>
+    <div id="confirmModal" class="modal bg-white rounded-lg shadow-xl w-11/12 md:w-1/2 lg:w-1/3">
+        <div class="p-4 border-b">
+            <h3 id="confirmModalTitle" class="text-lg font-semibold">Onay</h3>
+        </div>
+        <div id="confirmModalBody" class="p-6 text-gray-700">
+            <!-- Mesaj buraya gelecek -->
+        </div>
+        <div class="p-4 bg-gray-50 flex justify-end gap-2">
+            <button id="confirmModalNo" class="bg-gray-200 text-gray-700 font-bold py-2 px-4 rounded-md hover:bg-gray-300">İptal</button>
+            <button id="confirmModalYes" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-md hover:bg-blue-700">Evet</button>
+        </div>
+    </div>
+
 
     <script>
     let cvIsReady = false;
@@ -176,6 +191,13 @@
         const closeScannerBtn = document.getElementById('closeScannerBtn');
         const canvasOutput = document.getElementById('canvasOutput');
         
+        const confirmModalBackdrop = document.getElementById('confirmModalBackdrop');
+        const confirmModal = document.getElementById('confirmModal');
+        const confirmModalTitle = document.getElementById('confirmModalTitle');
+        const confirmModalBody = document.getElementById('confirmModalBody');
+        const confirmModalNo = document.getElementById('confirmModalNo');
+        const confirmModalYes = document.getElementById('confirmModalYes');
+
         const klasorInput = document.getElementById('klasor');
         // ... Diğer tüm element referansları ...
         const evrakFormu = document.getElementById('evrakFormu');
@@ -223,6 +245,31 @@
         let seciliKlasor = 'all';
         let stream = null;
         const { jsPDF } = window.jspdf;
+        
+        // --- Onay Modalı Fonksiyonları ---
+        const hideConfirmModal = () => {
+            confirmModal.style.display = 'none';
+            confirmModalBackdrop.style.display = 'none';
+        };
+        const customConfirm = (message, title = 'Onay') => {
+            return new Promise((resolve) => {
+                confirmModalTitle.textContent = title;
+                confirmModalBody.textContent = message;
+                confirmModal.style.display = 'block';
+                confirmModalBackdrop.style.display = 'block';
+
+                const handleYes = () => { hideConfirmModal(); resolve(true); removeListeners(); };
+                const handleNo = () => { hideConfirmModal(); resolve(false); removeListeners(); };
+                
+                const removeListeners = () => {
+                    confirmModalYes.removeEventListener('click', handleYes);
+                    confirmModalNo.removeEventListener('click', handleNo);
+                };
+                
+                confirmModalYes.addEventListener('click', handleYes);
+                confirmModalNo.addEventListener('click', handleNo);
+            });
+        };
 
 
         // --- Tarayıcı Fonksiyonları ---
@@ -251,7 +298,7 @@
             scannerModal.style.display = 'none';
         };
 
-        const processImage = () => {
+        const processImage = async () => {
             const video = videoFeed;
             const canvas = document.createElement('canvas');
             canvas.width = video.videoWidth;
@@ -297,13 +344,11 @@
                 corners.sort((a, b) => a.y - b.y);
                 const topCorners = corners.slice(0, 2).sort((a, b) => a.x - b.x);
                 const bottomCorners = corners.slice(2, 4).sort((a, b) => a.x - b.x);
-
                 const [tl, tr, bl, br] = [topCorners[0], topCorners[1], bottomCorners[0], bottomCorners[1]];
                 
                 const widthA = Math.hypot(br.x - bl.x, br.y - bl.y);
                 const widthB = Math.hypot(tr.x - tl.x, tr.y - tl.y);
                 const maxWidth = Math.max(widthA, widthB);
-
                 const heightA = Math.hypot(tr.x - br.x, tr.y - br.y);
                 const heightB = Math.hypot(tl.x - bl.x, tl.y - bl.y);
                 const maxHeight = Math.max(heightA, heightB);
@@ -314,21 +359,31 @@
                 let M = cv.getPerspectiveTransform(srcTri, dstTri);
                 cv.warpPerspective(src, dst, M, dsize, cv.INTER_LINEAR, cv.BORDER_CONSTANT, new cv.Scalar());
                 
-                // Görüntüyü iyileştir
                 cv.cvtColor(dst, dst, cv.COLOR_RGBA2GRAY);
                 cv.adaptiveThreshold(dst, dst, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, 11, 12);
 
                 cv.imshow(canvasOutput, dst);
                 videoFeed.style.display = 'none';
                 canvasOutput.style.display = 'block';
-
                 captureBtn.style.display = 'none';
                 retryScanBtn.style.display = 'inline-block';
                 confirmScanBtn.style.display = 'inline-block';
 
                 srcTri.delete(); dstTri.delete(); M.delete();
             } else {
-                 alert("Belge kenarları bulunamadı. Lütfen tekrar deneyin.");
+                const userChoice = await customConfirm("Belge kenarları otomatik bulunamadı. Düzeltilmemiş fotoğrafı kullanmak ister misiniz?");
+                if (userChoice) {
+                    let uncorrectedSrc = cv.imread(canvas);
+                    cv.cvtColor(uncorrectedSrc, uncorrectedSrc, cv.COLOR_RGBA2GRAY);
+                    cv.imshow(canvasOutput, uncorrectedSrc);
+                    uncorrectedSrc.delete();
+                    
+                    videoFeed.style.display = 'none';
+                    canvasOutput.style.display = 'block';
+                    captureBtn.style.display = 'none';
+                    retryScanBtn.style.display = 'inline-block';
+                    confirmScanBtn.style.display = 'inline-block';
+                }
             }
             
             src.delete(); dst.delete(); contours.delete(); hierarchy.delete();
@@ -363,8 +418,7 @@
             alert('Belge tarandı ve forma eklendi. Kaydet butonuna basarak işlemi tamamlayın.');
         });
         
-        // --- Mevcut Fonksiyonlar (Aşağısı Değişmedi) ---
-        // ...
+        // --- Mevcut Fonksiyonlar ---
         const showLoader = (message) => { loader.textContent = message; loader.style.display = 'block'; };
         const hideLoader = () => { loader.style.display = 'none'; };
         const formatDate = (dateString) => {
@@ -383,7 +437,7 @@
             kaydetBtn.textContent = 'Evrakı Kaydet';
             iptalBtn.classList.add('hidden');
             pdfDosyaInput.required = true;
-            pdfInputContainer.classList.remove('hidden');
+            pdfInputContainer.parentElement.parentElement.classList.remove('hidden');
         };
 
         const dosyayiBase64eCevir = (file) => new Promise((resolve, reject) => {
@@ -600,7 +654,8 @@
             if (targetLink.classList.contains('view-pdf')) showModal(evrak);
             else if (targetLink.classList.contains('view-note')) showNoteModal(evrak);
             else if (targetLink.classList.contains('delete-evrak')) {
-                if (confirm('Bu evrakı silmek istediğinizden emin misiniz?')) {
+                const userOnay = await customConfirm('Bu evrakı silmek istediğinizden emin misiniz?');
+                if (userOnay) {
                     evraklar = evraklar.filter(e => e.id !== evrakId);
                     await saveEvraklarToGithub();
                 }
