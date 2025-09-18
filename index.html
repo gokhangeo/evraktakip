@@ -142,6 +142,18 @@
         </div>
     </div>
 
+    <!-- Not Görüntüleyici Modal -->
+    <div id="noteModalBackdrop" class="modal-backdrop"></div>
+    <div id="noteModal" class="modal bg-white rounded-lg shadow-xl w-11/12 md:w-1/2 lg:w-1/3">
+        <div class="p-4 border-b flex justify-between items-center">
+            <h3 id="noteModalTitle" class="text-lg font-semibold">Evrak Notu</h3>
+            <button id="closeNoteModal" class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
+        </div>
+        <div id="noteContentView" class="p-6 whitespace-pre-wrap text-gray-700">
+            <!-- Not içeriği buraya gelecek -->
+        </div>
+    </div>
+
     <script>
     document.addEventListener('DOMContentLoaded', () => {
         // --- Element Referansları ---
@@ -166,6 +178,13 @@
         const closeModalBtn = document.getElementById('closeModal');
         const modalTitle = document.getElementById('modalTitle');
         const pdfFrame = document.getElementById('pdfFrame');
+
+        const noteModalBackdrop = document.getElementById('noteModalBackdrop');
+        const noteModal = document.getElementById('noteModal');
+        const closeNoteModalBtn = document.getElementById('closeNoteModal');
+        const noteModalTitle = document.getElementById('noteModalTitle');
+        const noteContentView = document.getElementById('noteContentView');
+
 
         // --- GitHub API Ayarları ---
         const p1 = 'ghp_MAuvwYTJDUiqFY5h72CZ';
@@ -251,11 +270,23 @@
             pdfFrame.src = '';
         };
 
+        const showNoteModal = (evrak) => {
+            noteModalTitle.textContent = `"${evrak.konu}" Notu`;
+            noteContentView.textContent = evrak.notlar;
+            noteModal.style.display = 'block';
+            noteModalBackdrop.style.display = 'block';
+        };
+
+        const hideNoteModal = () => {
+            noteModal.style.display = 'none';
+            noteModalBackdrop.style.display = 'none';
+            noteContentView.textContent = '';
+        };
+
 
         // --- Ana Fonksiyonlar ---
         const renderEvraklar = (filter = '') => {
             evrakListesiBody.innerHTML = '';
-            // DEĞİŞİKLİK: Arama hem konuya hem de evrak sayısına göre yapılıyor
             const filtrelenmisEvraklar = evraklar.filter(evrak => {
                 const aramaTerimi = filter.toLowerCase();
                 const konuEslesmesi = evrak.konu.toLowerCase().includes(aramaTerimi);
@@ -275,8 +306,22 @@
                     'İşlemde': 'bg-yellow-100 text-yellow-800',
                     'Cevaplandı': 'bg-green-100 text-green-800'
                 };
+
+                let noteIconHtml = '';
+                if (evrak.notlar && evrak.notlar.trim() !== '') {
+                    noteIconHtml = `<a href="#" class="text-yellow-500 hover:text-yellow-700 view-note" data-id="${evrak.id}" title="Notu Görüntüle">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline-block" viewBox="0 0 20 20" fill="currentColor">
+                          <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
+                          <path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd" />
+                        </svg>
+                    </a>`;
+                }
+
                 tr.innerHTML = `
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${evrak.konu}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 flex items-center">
+                        ${noteIconHtml}
+                        <span class="${noteIconHtml ? 'ml-2' : ''}">${evrak.konu}</span>
+                    </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${evrak.evrakSayisi}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatDate(evrak.gelisTarihi)}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatDate(evrak.sonCevapTarihi)}</td>
@@ -434,42 +479,48 @@
 
         evrakListesiBody.addEventListener('click', async (e) => {
             e.preventDefault();
-            const target = e.target;
-            const evrakId = parseInt(target.dataset.id);
+            const targetLink = e.target.closest('a');
+            if (!targetLink) return;
 
-            if (target.classList.contains('view-pdf')) {
-                const evrak = evraklar.find(ev => ev.id === evrakId);
-                if (evrak) showModal(evrak);
+            const evrakId = parseInt(targetLink.dataset.id);
+            const evrak = evraklar.find(ev => ev.id === evrakId);
+            if (!evrak) return;
+
+            if (targetLink.classList.contains('view-pdf')) {
+                showModal(evrak);
             } 
-            else if (target.classList.contains('delete-evrak')) {
+            else if (targetLink.classList.contains('view-note')) {
+                showNoteModal(evrak);
+            }
+            else if (targetLink.classList.contains('delete-evrak')) {
                 if (confirm('Bu evrakı silmek istediğinizden emin misiniz?')) {
                     evraklar = evraklar.filter(e => e.id !== evrakId);
                     await saveEvraklarToGithub();
                 }
             }
-            else if (target.classList.contains('edit-evrak')){
-                const evrak = evraklar.find(ev => ev.id === evrakId);
-                if (evrak) {
-                    editingEvrakId = evrak.id;
-                    konuInput.value = evrak.konu;
-                    gelisTarihiInput.value = evrak.gelisTarihi;
-                    evrakSayisiInput.value = evrak.evrakSayisi;
-                    sonCevapTarihiInput.value = evrak.sonCevapTarihi;
-                    durumInput.value = evrak.durum;
-                    notlarInput.value = evrak.notlar;
+            else if (targetLink.classList.contains('edit-evrak')){
+                editingEvrakId = evrak.id;
+                konuInput.value = evrak.konu;
+                gelisTarihiInput.value = evrak.gelisTarihi;
+                evrakSayisiInput.value = evrak.evrakSayisi;
+                sonCevapTarihiInput.value = evrak.sonCevapTarihi;
+                durumInput.value = evrak.durum;
+                notlarInput.value = evrak.notlar;
 
-                    formBasligi.textContent = 'Evrakı Düzenle';
-                    kaydetBtn.textContent = 'Değişiklikleri Kaydet';
-                    iptalBtn.classList.remove('hidden');
-                    pdfInputContainer.classList.add('hidden'); // PDF değiştirilemez
-                    pdfDosyaInput.required = false;
-                    window.scrollTo(0, 0); // Formu görmek için sayfanın başına git
-                }
+                formBasligi.textContent = 'Evrakı Düzenle';
+                kaydetBtn.textContent = 'Değişiklikleri Kaydet';
+                iptalBtn.classList.remove('hidden');
+                pdfInputContainer.classList.add('hidden');
+                pdfDosyaInput.required = false;
+                window.scrollTo(0, 0);
             }
         });
         
         closeModalBtn.addEventListener('click', hideModal);
         modalBackdrop.addEventListener('click', hideModal);
+
+        closeNoteModalBtn.addEventListener('click', hideNoteModal);
+        noteModalBackdrop.addEventListener('click', hideNoteModal);
 
         // --- Başlangıç ---
         loadEvraklarFromGithub();
