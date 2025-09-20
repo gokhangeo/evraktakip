@@ -255,7 +255,7 @@
                 const url = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${path}`;
                 const content = utf8_to_b64(JSON.stringify(data));
                 const body = {
-                    message: `Dosya güncellendi: ${data.konu || data.baslik}`,
+                    message: `Dosya güncellendi - ${new Date().toISOString()}`,
                     content: content,
                     sha: sha
                 };
