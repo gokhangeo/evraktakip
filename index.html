@@ -33,8 +33,8 @@
         #magnifier::before, #magnifier::after { content: ''; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); background: #00f; }
         #magnifier::before { width: 30px; height: 2px; }
         #magnifier::after { width: 2px; height: 30px; }
-        .alert-icon { animation: ring 1.5s ease-in-out infinite; }
-        @keyframes ring { 0%, 100% { transform: rotate(0); } 10%, 30%, 50%, 70%, 90% { transform: rotate(-10deg); } 20%, 40%, 60%, 80% { transform: rotate(10deg); } }
+        .alert-blink { animation: blink 1.2s linear infinite; }
+        @keyframes blink { 50% { opacity: 0.2; } }
     </style>
 </head>
 <body class="bg-gray-100 text-gray-800">
@@ -79,7 +79,8 @@
                         <div><label for="sonCevapTarihi" class="block text-sm font-medium text-gray-600">Son Cevap Tarihi</label><input type="date" id="sonCevapTarihi" name="sonCevapTarihi" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm"></div>
                         <div><label for="durum" class="block text-sm font-medium text-gray-600">Durum</label><select id="durum" name="durum" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm"><option value="Bekliyor">Bekliyor</option><option value="İşlemde">İşlemde</option><option value="Cevaplandı">Cevaplandı</option><option value="İşleme Gerek Yok">İşleme Gerek Yok</option></select></div>
                         <div><label for="notlar" class="block text-sm font-medium text-gray-600">Notlar</label><textarea id="notlar" name="notlar" rows="3" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm"></textarea></div>
-                        <div><label for="uyariTarihi" class="block text-sm font-medium text-gray-600">Uyarı Tarihi (Hatırlatıcı)</label><input type="date" id="uyariTarihi" name="uyariTarihi" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm"></div>
+                        <div><label for="uyariTarihi" class="block text-sm font-medium text-gray-600">Uyarı Tarihi (Belirli bir gün)</label><input type="date" id="uyariTarihi" name="uyariTarihi" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm"></div>
+                        <div><label for="uyariGunu" class="block text-sm font-medium text-gray-600">Tekrarlanan Uyarı Günü (Her Ayın)</label><input type="number" id="uyariGunu" name="uyariGunu" min="1" max="31" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm" placeholder="Örn: 15"></div>
                         <div class="flex space-x-2"><button type="submit" id="kaydetBtn" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-md hover:bg-blue-700">Evrakı Kaydet</button><button type="button" id="iptalBtn" class="w-full bg-gray-200 text-gray-700 font-bold py-2 px-4 rounded-md hover:bg-gray-300 hidden">İptal</button></div>
                     </form>
                 </div>
@@ -101,7 +102,8 @@
                     <form id="hizliNotFormu" class="space-y-4">
                         <div><label for="notBaslik" class="block text-sm font-medium text-gray-600">Not Başlığı</label><input type="text" id="notBaslik" name="notBaslik" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm" required></div>
                         <div><label for="notIcerik" class="block text-sm font-medium text-gray-600">Not İçeriği</label><textarea id="notIcerik" name="notIcerik" rows="5" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm"></textarea></div>
-                        <div><label for="notUyariTarihi" class="block text-sm font-medium text-gray-600">Uyarı Tarihi</label><input type="date" id="notUyariTarihi" name="notUyariTarihi" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm"></div>
+                        <div><label for="notUyariTarihi" class="block text-sm font-medium text-gray-600">Uyarı Tarihi (Belirli bir gün)</label><input type="date" id="notUyariTarihi" name="notUyariTarihi" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm"></div>
+                        <div><label for="notUyariGunu" class="block text-sm font-medium text-gray-600">Tekrarlanan Uyarı Günü (Her Ayın)</label><input type="number" id="notUyariGunu" name="notUyariGunu" min="1" max="31" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm" placeholder="Örn: 20"></div>
                         <div class="flex space-x-2"><button type="submit" id="notKaydetBtn" class="w-full bg-green-600 text-white font-bold py-2 px-4 rounded-md hover:bg-green-700">Notu Kaydet</button><button type="button" id="notIptalBtn" class="w-full bg-gray-200 text-gray-700 font-bold py-2 px-4 rounded-md hover:bg-gray-300 hidden">İptal</button></div>
                     </form>
                 </div>
@@ -141,6 +143,7 @@
             const durumInput = document.getElementById('durum');
             const notlarInput = document.getElementById('notlar');
             const uyariTarihiInput = document.getElementById('uyariTarihi');
+            const uyariGunuInput = document.getElementById('uyariGunu');
             const kaydetBtn = document.getElementById('kaydetBtn');
             const iptalBtn = document.getElementById('iptalBtn');
             const formBasligi = document.getElementById('formBasligi');
@@ -152,6 +155,7 @@
             const notBaslikInput = document.getElementById('notBaslik');
             const notIcerikInput = document.getElementById('notIcerik');
             const notUyariTarihiInput = document.getElementById('notUyariTarihi');
+            const notUyariGunuInput = document.getElementById('notUyariGunu');
             const notKaydetBtn = document.getElementById('notKaydetBtn');
             const notIptalBtn = document.getElementById('notIptalBtn');
             const hizliNotListesi = document.getElementById('hizliNotListesi');
@@ -278,18 +282,78 @@
             const showNoteModal = (evrak) => { noteModalTitle.textContent = `"${evrak.konu}" Notu`; noteContentView.textContent = evrak.notlar; noteModal.style.display = 'block'; noteModalBackdrop.style.display = 'block'; };
             const hideNoteModal = () => { noteModal.style.display = 'none'; noteModalBackdrop.style.display = 'none'; noteContentView.textContent = ''; };
             const renderKlasorler = () => { const klasorler = [...new Set(evraklar.map(e => e.klasor).filter(Boolean))]; klasorListesi.innerHTML = ''; const createButton = (name, value) => { const button = document.createElement('button'); button.textContent = name; button.dataset.klasor = value; button.className = `klasor-item px-3 py-1 text-sm font-medium rounded-full cursor-pointer transition-colors duration-200 ${seciliKlasor === value ? 'active' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`; return button; }; klasorListesi.appendChild(createButton('Tüm Evraklar', 'all')); klasorler.sort().forEach(klasor => klasorListesi.appendChild(createButton(klasor, klasor))); };
-            const renderEvraklar = (filter = '') => { evrakListesiBody.innerHTML = ''; let filtrelenmisEvraklar = evraklar; if (seciliKlasor !== 'all') { filtrelenmisEvraklar = filtrelenmisEvraklar.filter(e => e.klasor === seciliKlasor); } if (filter) { filtrelenmisEvraklar = filtrelenmisEvraklar.filter(evrak => { const searchTerm = filter.toLowerCase(); const konuMatch = evrak.konu.toLowerCase().includes(searchTerm); const sayiMatch = evrak.evrakSayisi && evrak.evrakSayisi.toLowerCase().includes(searchTerm); return konuMatch || sayiMatch; }); } if (filtrelenmisEvraklar.length === 0) { evrakListesiBody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-gray-500">Bu kritere uygun evrak bulunamadı.</td></tr>`; return; } const today = new Date(); today.setHours(0, 0, 0, 0); filtrelenmisEvraklar.sort((a,b) => b.id - a.id).forEach(evrak => { const tr = document.createElement('tr'); const durumRenkleri = { 'Bekliyor': 'bg-blue-100 text-blue-800', 'İşlemde': 'bg-yellow-100 text-yellow-800', 'Cevaplandı': 'bg-green-100 text-green-800', 'İşleme Gerek Yok': 'bg-gray-100 text-gray-800' }; let ikonlar = ''; const uyariTarihi = evrak.uyariTarihi ? new Date(evrak.uyariTarihi) : null; if (uyariTarihi && uyariTarihi <= today) { ikonlar += `<a href="#" class="text-red-500 view-note" data-id="${evrak.id}" title="Uyarı Tarihi: ${formatDate(evrak.uyariTarihi)}"><span class="alert-icon">🔔</span></a>`; } if (evrak.notlar && evrak.notlar.trim() !== '') { ikonlar += `<a href="#" class="text-yellow-500 hover:text-yellow-700 view-note ml-2" data-id="${evrak.id}" title="Notu Görüntüle">📋</a>`; } tr.innerHTML = `<td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 flex items-center">${ikonlar}<span class="${ikonlar ? 'ml-2' : ''}">${evrak.konu}</span></td><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${evrak.evrakSayisi}</td><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatDate(evrak.gelisTarihi)}</td><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatDate(evrak.sonCevapTarihi)}</td><td class="px-6 py-4 whitespace-nowrap"><span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${durumRenkleri[evrak.durum] || 'bg-gray-100 text-gray-800'}">${evrak.durum}</span></td><td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"><a href="#" class="text-blue-600 hover:text-blue-900 view-pdf" data-id="${evrak.id}">Görüntüle</a><a href="#" class="text-green-600 hover:text-green-900 ml-4 edit-evrak" data-id="${evrak.id}">Düzenle</a><a href="#" class="text-red-600 hover:text-red-900 ml-4 delete-evrak" data-id="${evrak.id}">Sil</a></td>`; evrakListesiBody.appendChild(tr); }); };
+            const renderEvraklar = (filter = '') => { 
+                evrakListesiBody.innerHTML = ''; 
+                let filtrelenmisEvraklar = evraklar; 
+                if (seciliKlasor !== 'all') { filtrelenmisEvraklar = filtrelenmisEvraklar.filter(e => e.klasor === seciliKlasor); } 
+                if (filter) { filtrelenmisEvraklar = filtrelenmisEvraklar.filter(evrak => { const searchTerm = filter.toLowerCase(); const konuMatch = evrak.konu.toLowerCase().includes(searchTerm); const sayiMatch = evrak.evrakSayisi && evrak.evrakSayisi.toLowerCase().includes(searchTerm); return konuMatch || sayiMatch; }); } 
+                if (filtrelenmisEvraklar.length === 0) { evrakListesiBody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-gray-500">Bu kritere uygun evrak bulunamadı.</td></tr>`; return; } 
+                
+                const today = new Date(); 
+                const currentDay = today.getDate();
+                today.setHours(0, 0, 0, 0); 
+                
+                filtrelenmisEvraklar.sort((a,b) => b.id - a.id).forEach(evrak => { 
+                    const tr = document.createElement('tr'); 
+                    const durumRenkleri = { 'Bekliyor': 'bg-blue-100 text-blue-800', 'İşlemde': 'bg-yellow-100 text-yellow-800', 'Cevaplandı': 'bg-green-100 text-green-800', 'İşleme Gerek Yok': 'bg-gray-100 text-gray-800' }; 
+                    let ikonlar = ''; 
+                    
+                    let isAlertActive = false;
+                    let alertTitle = '';
+
+                    const uyariTarihi = evrak.uyariTarihi ? new Date(evrak.uyariTarihi) : null;
+                    if (uyariTarihi && uyariTarihi <= today) {
+                        isAlertActive = true;
+                        alertTitle = `Uyarı Tarihi: ${formatDate(evrak.uyariTarihi)}`;
+                    }
+
+                    const uyariGunu = evrak.uyariGunu ? parseInt(evrak.uyariGunu) : 0;
+                    if (!isAlertActive && uyariGunu > 0 && currentDay >= uyariGunu) {
+                        isAlertActive = true;
+                        alertTitle = `Aylık Uyarı Günü: ${evrak.uyariGunu}`;
+                    }
+
+                    if(isAlertActive) {
+                        ikonlar += `<a href="#" class="text-red-500 view-note" data-id="${evrak.id}" title="${alertTitle}"><span class="alert-blink font-bold text-lg">❗</span></a>`;
+                    }
+                    if (evrak.notlar && evrak.notlar.trim() !== '') { 
+                        ikonlar += `<a href="#" class="text-yellow-500 hover:text-yellow-700 view-note ml-2" data-id="${evrak.id}" title="Notu Görüntüle">📋</a>`; 
+                    } 
+                    tr.innerHTML = `<td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 flex items-center">${ikonlar}<span class="${ikonlar ? 'ml-2' : ''}">${evrak.konu}</span></td><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${evrak.evrakSayisi}</td><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatDate(evrak.gelisTarihi)}</td><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatDate(evrak.sonCevapTarihi)}</td><td class="px-6 py-4 whitespace-nowrap"><span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${durumRenkleri[evrak.durum] || 'bg-gray-100 text-gray-800'}">${evrak.durum}</span></td><td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"><a href="#" class="text-blue-600 hover:text-blue-900 view-pdf" data-id="${evrak.id}">Görüntüle</a><a href="#" class="text-green-600 hover:text-green-900 ml-4 edit-evrak" data-id="${evrak.id}">Düzenle</a><a href="#" class="text-red-600 hover:text-red-900 ml-4 delete-evrak" data-id="${evrak.id}">Sil</a></td>`; 
+                    evrakListesiBody.appendChild(tr); 
+                }); 
+            };
             const renderHizliNotlar = (filter = '') => {
                 hizliNotListesi.innerHTML = '';
                 const filtrelenmisNotlar = hizliNotlar.filter(not => not.baslik.toLowerCase().includes(filter.toLowerCase()) || not.icerik.toLowerCase().includes(filter.toLowerCase()));
                 if (filtrelenmisNotlar.length === 0) { hizliNotListesi.innerHTML = `<p class="text-center py-4 text-gray-500">Kayıtlı not bulunamadı.</p>`; return; }
-                const today = new Date(); today.setHours(0, 0, 0, 0);
+                const today = new Date(); const currentDay = today.getDate();
+                today.setHours(0, 0, 0, 0); 
+                
                  filtrelenmisNotlar.sort((a,b) => b.id - a.id).forEach(not => {
                     const div = document.createElement('div');
                     div.className = 'bg-gray-50 p-4 rounded-lg border';
                     let uyariIkonu = '';
+
+                    let isAlertActive = false;
+                    let alertTitle = '';
+
                     const uyariTarihi = not.uyariTarihi ? new Date(not.uyariTarihi) : null;
-                    if (uyariTarihi && uyariTarihi <= today) { uyariIkonu = `<span class="text-red-500 alert-icon" title="Uyarı Tarihi: ${formatDate(not.uyariTarihi)}">🔔</span>`; }
+                    if (uyariTarihi && uyariTarihi <= today) {
+                        isAlertActive = true;
+                        alertTitle = `Uyarı Tarihi: ${formatDate(not.uyariTarihi)}`;
+                    }
+
+                    const uyariGunu = not.uyariGunu ? parseInt(not.uyariGunu) : 0;
+                    if (!isAlertActive && uyariGunu > 0 && currentDay >= uyariGunu) {
+                        isAlertActive = true;
+                        alertTitle = `Aylık Uyarı Günü: ${not.uyariGunu}`;
+                    }
+
+                    if(isAlertActive) {
+                        uyariIkonu = `<span class="text-red-500 alert-blink font-bold text-lg" title="${alertTitle}">❗</span>`; 
+                    }
+
                     div.innerHTML = `
                         <div class="flex justify-between items-start">
                             <div class="flex-1">
@@ -315,16 +379,17 @@
                 e.preventDefault(); 
                 showLoader('Kaydediliyor...');
                 try {
+                    const data = { konu: konuInput.value, klasor: klasorInput.value.trim(), gelisTarihi: gelisTarihiInput.value, evrakSayisi: evrakSayisiInput.value, sonCevapTarihi: sonCevapTarihiInput.value, durum: durumInput.value, notlar: notlarInput.value, uyariTarihi: uyariTarihiInput.value, uyariGunu: uyariGunuInput.value };
                     if (editingEvrakId) { 
                         const evrak = evraklar.find(i => i.id === editingEvrakId);
                         if (evrak) {
-                             Object.assign(evrak, { konu: konuInput.value, klasor: klasorInput.value.trim(), gelisTarihi: gelisTarihiInput.value, evrakSayisi: evrakSayisiInput.value, sonCevapTarihi: sonCevapTarihiInput.value, durum: durumInput.value, notlar: notlarInput.value, uyariTarihi: uyariTarihiInput.value });
+                             Object.assign(evrak, data);
                              const { sha, ...dataToSave } = evrak;
                              await saveDataToGithub(`${evraklarPath}/${evrak.id}.json`, dataToSave, sha);
                         }
                     } else { 
                         if (!seciliDosyaBase64) { throw new Error('Lütfen bir PDF dosyası seçin veya mobil tarayıcıyı kullanın.'); } 
-                        const newEvrak = { id: Date.now(), konu: konuInput.value, klasor: klasorInput.value.trim(), gelisTarihi: gelisTarihiInput.value, evrakSayisi: evrakSayisiInput.value, sonCevapTarihi: sonCevapTarihiInput.value, durum: durumInput.value, notlar: notlarInput.value, uyariTarihi: uyariTarihiInput.value, dosyaBase64: seciliDosyaBase64 };
+                        const newEvrak = { ...data, id: Date.now(), dosyaBase64: seciliDosyaBase64 };
                         await saveDataToGithub(`${evraklarPath}/${newEvrak.id}.json`, newEvrak);
                     } 
                     await loadDataFromGithub();
@@ -351,21 +416,39 @@
                         hideLoader();
                     } 
                 } 
-                else if (target.classList.contains('edit-evrak')) { editingEvrakId = evrak.id; konuInput.value = evrak.konu; klasorInput.value = evrak.klasor || ''; gelisTarihiInput.value = evrak.gelisTarihi; evrakSayisiInput.value = evrak.evrakSayisi; sonCevapTarihiInput.value = evrak.sonCevapTarihi; durumInput.value = evrak.durum; notlarInput.value = evrak.notlar; uyariTarihiInput.value = evrak.uyariTarihi || ''; formBasligi.textContent = 'Evrakı Düzenle'; kaydetBtn.textContent = 'Değişiklikleri Kaydet'; iptalBtn.classList.remove('hidden'); dosyaGirisContainer.classList.add('hidden'); pdfDosyaInput.required = false; window.scrollTo(0, 0); }
+                else if (target.classList.contains('edit-evrak')) { 
+                    editingEvrakId = evrak.id; 
+                    konuInput.value = evrak.konu; 
+                    klasorInput.value = evrak.klasor || ''; 
+                    gelisTarihiInput.value = evrak.gelisTarihi; 
+                    evrakSayisiInput.value = evrak.evrakSayisi; 
+                    sonCevapTarihiInput.value = evrak.sonCevapTarihi; 
+                    durumInput.value = evrak.durum; 
+                    notlarInput.value = evrak.notlar; 
+                    uyariTarihiInput.value = evrak.uyariTarihi || '';
+                    uyariGunuInput.value = evrak.uyariGunu || ''; 
+                    formBasligi.textContent = 'Evrakı Düzenle'; 
+                    kaydetBtn.textContent = 'Değişiklikleri Kaydet'; 
+                    iptalBtn.classList.remove('hidden'); 
+                    dosyaGirisContainer.classList.add('hidden'); 
+                    pdfDosyaInput.required = false; 
+                    window.scrollTo(0, 0); 
+                }
             });
             hizliNotFormu.addEventListener('submit', async (e) => { 
                 e.preventDefault(); 
                 showLoader('Kaydediliyor...');
                 try {
+                    const data = { baslik: notBaslikInput.value, icerik: notIcerikInput.value, uyariTarihi: notUyariTarihiInput.value, uyariGunu: notUyariGunuInput.value };
                     if (editingNotId) { 
                         const not = hizliNotlar.find(n => n.id === editingNotId); 
                         if (not) { 
-                            Object.assign(not, { baslik: notBaslikInput.value, icerik: notIcerikInput.value, uyariTarihi: notUyariTarihiInput.value });
+                            Object.assign(not, data);
                             const { sha, ...dataToSave } = not;
                             await saveDataToGithub(`${notlarPath}/${not.id}.json`, dataToSave, sha);
                         } 
                     } else { 
-                        const newNot = { id: Date.now(), baslik: notBaslikInput.value, icerik: notIcerikInput.value, uyariTarihi: notUyariTarihiInput.value };
+                        const newNot = { ...data, id: Date.now() };
                         await saveDataToGithub(`${notlarPath}/${newNot.id}.json`, newNot);
                     } 
                     await loadDataFromGithub();
@@ -380,7 +463,16 @@
             notAramaInput.addEventListener('input', (e) => renderHizliNotlar(e.target.value));
             hizliNotListesi.addEventListener('click', async (e) => { 
                 const target = e.target; if (!target.dataset.id) return; const notId = parseInt(target.dataset.id); const not = hizliNotlar.find(n => n.id === notId); if (!not) return; 
-                if (target.classList.contains('edit-not')) { editingNotId = not.id; notBaslikInput.value = not.baslik; notIcerikInput.value = not.icerik; notUyariTarihiInput.value = not.uyariTarihi || ''; notFormBasligi.textContent = 'Notu Düzenle'; notKaydetBtn.textContent = 'Değişiklikleri Kaydet'; notIptalBtn.classList.remove('hidden'); } 
+                if (target.classList.contains('edit-not')) { 
+                    editingNotId = not.id; 
+                    notBaslikInput.value = not.baslik; 
+                    notIcerikInput.value = not.icerik; 
+                    notUyariTarihiInput.value = not.uyariTarihi || '';
+                    notUyariGunuInput.value = not.uyariGunu || ''; 
+                    notFormBasligi.textContent = 'Notu Düzenle'; 
+                    notKaydetBtn.textContent = 'Değişiklikleri Kaydet'; 
+                    notIptalBtn.classList.remove('hidden'); 
+                } 
                 else if (target.classList.contains('delete-not')) { 
                     if (confirm('Bu notu silmek istediğinizden emin misiniz?')) { 
                         showLoader('Siliniyor...');
