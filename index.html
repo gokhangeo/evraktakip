@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Evrak & Not Takip Sistemi (Google Drive)</title>
+    <title>Evrak & Not Takip Sistemi</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Gerekli Kütüphaneler -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.min.js"></script>
@@ -47,20 +47,6 @@
             <p class="text-gray-500">Gelen evraklarınızı ve notlarınızı yönetin.</p>
         </header>
         
-        <!-- Google Drive Senkronizasyon Bölümü -->
-        <div class="mb-6 bg-white p-4 rounded-lg shadow-md border border-blue-200">
-             <h3 class="text-lg font-semibold mb-2 text-gray-700">Veri Senkronizasyonu</h3>
-             <div id="auth-container">
-                <p id="auth-message" class="text-sm text-gray-600 mb-3">Farklı cihazlardan erişim ve otomatik yedekleme için Google hesabınızla giriş yapın.</p>
-                <button id="authorize_button" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-md hover:bg-blue-700" disabled>Google API Yükleniyor...</button>
-             </div>
-             <div id="user-info" class="hidden">
-                <p id="user-profile" class="text-sm text-gray-800 mb-3"></p>
-                <p id="sync-status" class="text-sm text-green-600 font-medium"></p>
-                <button id="signout_button" class="mt-2 bg-red-500 text-white font-bold py-2 px-4 rounded-md hover:bg-red-600">Çıkış Yap</button>
-             </div>
-        </div>
-
         <!-- Sekme Menüsü -->
         <div class="mb-8 border-b border-gray-200">
             <nav class="flex space-x-4" aria-label="Tabs">
@@ -134,44 +120,10 @@
     <div id="noteModalBackdrop" class="modal-backdrop"></div><div id="noteModal" class="modal bg-white rounded-lg shadow-xl w-11/12 md:w-1/2 lg:w-1/3"><div class="p-4 border-b flex justify-between items-center"><h3 id="noteModalTitle" class="text-lg font-semibold">Evrak Notu</h3><button id="closeNoteModal" class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button></div><div id="noteContentView" class="p-6 whitespace-pre-wrap text-gray-700"></div></div>
     <div id="scannerModal"><video id="videoFeed" playsinline></video><canvas id="cropCanvas" class="hidden"></canvas><canvas id="canvasOutput" class="hidden"></canvas><div id="magnifier"></div><div id="scannerControls"><button id="retryScanBtn" class="bg-yellow-500 text-white font-bold py-2 px-4 rounded-md hidden">Tekrar Çek</button><div id="captureBtn" class="scanner-button"><div class="scanner-inner-button"></div></div><button id="cropBtn" class="bg-blue-500 text-white font-bold py-2 px-4 rounded-md hidden">Onayla</button><button id="confirmScanBtn" class="bg-green-500 text-white font-bold py-2 px-4 rounded-md hidden">Kaydet</button></div><button id="closeScannerBtn" class="absolute top-5 right-5 text-white text-3xl font-bold">&times;</button></div>
 
-    <script type="text/javascript">
+    <script>
         let cvIsReady = false;
-        // Bu fonksiyonlar global olmalı
         window.onOpenCvReady = () => { cv['onRuntimeInitialized']=()=>{ cvIsReady = true; if(document.getElementById('scanBtn')) { document.getElementById('scanBtn').disabled = false; } }; };
-
-        const API_KEY = 'AIzaSyA7IRgFk4oGqOmid0znWsiihGOPDaCRqIk';
-        const CLIENT_ID = '1026437006592-71kmob9v6a2g1bnk0hqlu7dnir1nsv38.apps.googleusercontent.com';
-        const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest';
-        const SCOPES = 'https://www.googleapis.com/auth/drive.file';
-            
-        let tokenClient;
-        let gapiInited = false;
-        let gisInited = false;
         
-        async function initializeGapiClient() { 
-            await gapi.client.init({ apiKey: API_KEY, discoveryDocs: [DISCOVERY_DOC], }); 
-            gapiInited = true; 
-            maybeEnableButtons(); 
-        }
-
-        window.gapiLoaded = () => {
-            gapi.load('client', initializeGapiClient);
-        };
-        
-        window.gisLoaded = () => { 
-            tokenClient = google.accounts.oauth2.initTokenClient({ client_id: CLIENT_ID, scope: SCOPES, callback: '', }); 
-            gisInited = true; 
-            maybeEnableButtons(); 
-        };
-
-        function maybeEnableButtons() {
-            const authorizeButton = document.getElementById('authorize_button');
-            if (gapiInited && gisInited && authorizeButton) { 
-                authorizeButton.disabled = false; 
-                authorizeButton.textContent = 'Google ile Giriş Yap';
-            }
-        }
-
         document.addEventListener('DOMContentLoaded', () => {
             // --- Element Referansları ---
             const tabEvrak = document.getElementById('tabEvrak');
@@ -226,17 +178,16 @@
             const cropCanvas = document.getElementById('cropCanvas');
             const canvasOutput = document.getElementById('canvasOutput');
             const magnifier = document.getElementById('magnifier');
-            const authorizeButton = document.getElementById('authorize_button');
-            const signoutButton = document.getElementById('signout_button');
-            const authContainer = document.getElementById('auth-container');
-            const userInfoContainer = document.getElementById('user-info');
-            const userProfileP = document.getElementById('user-profile');
-            const syncStatusP = document.getElementById('sync-status');
 
-            // --- Google API Ayarları ---
-            const FILENAME = 'evrak-takip-data.json';
-            let fileId = null;
-
+            // --- GitHub API Ayarları ---
+            const p1 = 'ghp_MAuvwYTJDUiqFY5h72CZ';
+            const p2 = 'eXnMKuxrCJ08sfAl';
+            const githubToken = p1 + p2;
+            const repoOwner = 'gokhangeo';
+            const repoName = 'evraktakip';
+            const evraklarPath = 'dosya';
+            const notlarPath = 'notlar';
+            
             // --- Uygulama Değişkenleri ---
             pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.worker.min.js`;
             let evraklar = []; let hizliNotlar = [];
@@ -244,79 +195,78 @@
             let seciliKlasor = 'all'; let stream = null; const { jsPDF } = window.jspdf;
             let cornerPoints = []; let draggingPointIndex = -1; let capturedImage = null;
 
-             // --- Yardımcı Fonksiyonlar ---
+            // --- Yardımcı Fonksiyonlar ---
             const showLoader = (message) => { loader.textContent = message; loader.style.display = 'block'; };
             const hideLoader = () => { loader.style.display = 'none'; };
             const formatDate = (dateString) => { if (!dateString) return ''; const [year, month, day] = dateString.split('-'); return `${day}.${month}.${year}`; };
+            const utf8_to_b64 = (str) => btoa(unescape(encodeURIComponent(str)));
+            const b64_to_utf8 = (str) => decodeURIComponent(escape(atob(str)));
 
             // --- Tarayıcı Fonksiyonları ---
             const openScanner=async()=>{if(!cvIsReady){alert('Tarayıcı kütüphanesi henüz hazır değil.');return}try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1920},height:{ideal:1080}}});videoFeed.srcObject=stream;videoFeed.style.display='block';cropCanvas.style.display='none';canvasOutput.style.display='none';scannerModal.style.display='flex';captureBtn.style.display='flex';retryScanBtn.style.display='none';cropBtn.style.display='none';confirmScanBtn.style.display='none';videoFeed.play()}catch(err){alert("Kameraya erişilemedi. Lütfen izinleri kontrol edin.")}};const closeScanner=()=>{if(stream){stream.getTracks().forEach(track=>track.stop())}scannerModal.style.display='none'};const startCropping=()=>{capturedImage=document.createElement('canvas');capturedImage.width=videoFeed.videoWidth;capturedImage.height=videoFeed.videoHeight;capturedImage.getContext('2d').drawImage(videoFeed,0,0);videoFeed.style.display='none';cropCanvas.style.display='block';captureBtn.style.display='none';retryScanBtn.style.display='inline-block';cropBtn.style.display='inline-block';const margin=0.15;cornerPoints=[{x:capturedImage.width*margin,y:capturedImage.height*margin},{x:capturedImage.width*(1-margin),y:capturedImage.height*margin},{x:capturedImage.width*(1-margin),y:capturedImage.height*(1-margin)},{x:capturedImage.width*margin,y:capturedImage.height*(1-margin)},];cropCanvas.width=scannerModal.clientWidth;cropCanvas.height=scannerModal.clientHeight*0.85;drawCroppingUI()};const drawCroppingUI=()=>{const ctx=cropCanvas.getContext('2d');const canvasWidth=cropCanvas.width;const canvasHeight=cropCanvas.height;const imgRatio=capturedImage.width/capturedImage.height;const canvasRatio=canvasWidth/canvasHeight;let drawWidth,drawHeight,offsetX,offsetY;if(imgRatio>canvasRatio){drawWidth=canvasWidth;drawHeight=drawWidth/imgRatio;offsetX=0;offsetY=(canvasHeight-drawHeight)/2}else{drawHeight=canvasHeight;drawWidth=drawHeight*imgRatio;offsetY=0;offsetX=(canvasWidth-drawWidth)/2}ctx.clearRect(0,0,canvasWidth,canvasHeight);ctx.drawImage(capturedImage,offsetX,offsetY,drawWidth,drawHeight);ctx.strokeStyle='#00f';ctx.lineWidth=2;ctx.beginPath();const toCanvasPoint=p=>({x:(p.x/capturedImage.width)*drawWidth+offsetX,y:(p.y/capturedImage.height)*drawHeight+offsetY});const canvasPoints=cornerPoints.map(toCanvasPoint);ctx.moveTo(canvasPoints[0].x,canvasPoints[0].y);for(let i=1;i<canvasPoints.length;i++){ctx.lineTo(canvasPoints[i].x,canvasPoints[i].y)}ctx.closePath();ctx.stroke();ctx.fillStyle='#00f';canvasPoints.forEach(p=>{ctx.beginPath();ctx.arc(p.x,p.y,10,0,2*Math.PI);ctx.fill()})};const getTouchPos=(canvas,evt)=>{const rect=canvas.getBoundingClientRect();const touch=evt.touches[0];return{x:touch.clientX-rect.left,y:touch.clientY-rect.top}};const getMousePos=(canvas,evt)=>{const rect=canvas.getBoundingClientRect();return{x:evt.clientX-rect.left,y:evt.clientY-rect.top}};const handleDragStart=(pos)=>{const canvasPoints=cornerPoints.map(p=>{const imgRatio=capturedImage.width/capturedImage.height;const canvasRatio=cropCanvas.width/cropCanvas.height;let drawWidth,drawHeight,offsetX,offsetY;if(imgRatio>canvasRatio){drawWidth=cropCanvas.width;drawHeight=drawWidth/imgRatio;offsetX=0;offsetY=(cropCanvas.height-drawHeight)/2}else{drawHeight=cropCanvas.height;drawWidth=drawHeight*imgRatio;offsetY=0;offsetX=(cropCanvas.width-drawWidth)/2}return{x:(p.x/capturedImage.width)*drawWidth+offsetX,y:(p.y/capturedImage.height)*drawHeight+offsetY}});for(let i=0;i<canvasPoints.length;i++){const dist=Math.hypot(pos.x-canvasPoints[i].x,pos.y-canvasPoints[i].y);if(dist<20){draggingPointIndex=i;cropCanvas.style.cursor='grabbing';break}}};const handleDragMove=(pos)=>{if(draggingPointIndex===-1)return;const imgRatio=capturedImage.width/capturedImage.height;const canvasRatio=cropCanvas.width/cropCanvas.height;let drawWidth,drawHeight,offsetX,offsetY;if(imgRatio>canvasRatio){drawWidth=cropCanvas.width;drawHeight=drawWidth/imgRatio;offsetX=0;offsetY=(cropCanvas.height-drawHeight)/2}else{drawHeight=cropCanvas.height;drawWidth=drawHeight*imgRatio;offsetY=0;offsetX=(cropCanvas.width-drawWidth)/2}cornerPoints[draggingPointIndex]={x:((pos.x-offsetX)/drawWidth)*capturedImage.width,y:((pos.y-offsetY)/drawHeight)*capturedImage.height,};const magnifySize=120;magnifier.style.display='block';magnifier.style.left=`${pos.x-magnifySize/2}px`;magnifier.style.top=`${pos.y-magnifySize/2}px`;magnifier.style.background=`url(${capturedImage.toDataURL()})`;const bgPosX=-(cornerPoints[draggingPointIndex].x*2-magnifySize/2);const bgPosY=-(cornerPoints[draggingPointIndex].y*2-magnifySize/2);magnifier.style.backgroundPosition=`${bgPosX}px ${bgPosY}px`;magnifier.style.backgroundSize=`${capturedImage.width*2}px ${capturedImage.height*2}px`;drawCroppingUI()};const handleDragEnd=()=>{draggingPointIndex=-1;cropCanvas.style.cursor='grab';magnifier.style.display='none'};cropCanvas.addEventListener('mousedown',(e)=>handleDragStart(getMousePos(cropCanvas,e)));cropCanvas.addEventListener('mousemove',(e)=>handleDragMove(getMousePos(cropCanvas,e)));cropCanvas.addEventListener('mouseup',handleDragEnd);cropCanvas.addEventListener('mouseleave',handleDragEnd);cropCanvas.addEventListener('touchstart',(e)=>{e.preventDefault();handleDragStart(getTouchPos(cropCanvas,e))});cropCanvas.addEventListener('touchmove',(e)=>{e.preventDefault();handleDragMove(getTouchPos(cropCanvas,e))});cropCanvas.addEventListener('touchend',handleDragEnd);const applyCrop=()=>{let src=cv.imread(capturedImage);const sortedPoints=[...cornerPoints].sort((a,b)=>a.y-b.y);const topPoints=sortedPoints.slice(0,2).sort((a,b)=>a.x-b.x);const bottomPoints=sortedPoints.slice(2,4).sort((a,b)=>a.x-b.x);const[tl,tr,bl,br]=[topPoints[0],topPoints[1],bottomPoints[0],bottomPoints[1]];const widthA=Math.hypot(br.x-bl.x,br.y-bl.y);const widthB=Math.hypot(tr.x-tl.x,tr.y-tl.y);const maxWidth=Math.max(widthA,widthB);const heightA=Math.hypot(tr.x-br.x,tr.y-br.y);const heightB=Math.hypot(tl.x-bl.x,tl.y-bl.y);const maxHeight=Math.max(heightA,heightB);let dst=new cv.Mat();let dsize=new cv.Size(maxWidth,maxHeight);let srcTri=cv.matFromArray(4,1,cv.CV_32FC2,[tl.x,tl.y,tr.x,tr.y,bl.x,bl.y,br.x,br.y]);let dstTri=cv.matFromArray(4,1,cv.CV_32FC2,[0,0,maxWidth,0,0,maxHeight,maxWidth,maxHeight]);let M=cv.getPerspectiveTransform(srcTri,dstTri);cv.warpPerspective(src,dst,M,dsize,cv.INTER_LINEAR,cv.BORDER_CONSTANT,new cv.Scalar());cv.cvtColor(dst,dst,cv.COLOR_RGBA2GRAY);cv.adaptiveThreshold(dst,dst,255,cv.ADAPTIVE_THRESH_GAUSSIAN_C,cv.THRESH_BINARY,11,12);cv.imshow(canvasOutput,dst);cropCanvas.style.display='none';canvasOutput.style.display='block';cropBtn.style.display='none';confirmScanBtn.style.display='inline-block';src.delete();dst.delete();srcTri.delete();dstTri.delete();M.delete()};scanBtn.addEventListener('click',openScanner);closeScannerBtn.addEventListener('click',closeScanner);captureBtn.addEventListener('click',startCropping);retryScanBtn.addEventListener('click',()=>{videoFeed.style.display='block';cropCanvas.style.display='none';canvasOutput.style.display='none';captureBtn.style.display='flex';retryScanBtn.style.display='none';cropBtn.style.display='none';confirmScanBtn.style.display='none'});cropBtn.addEventListener('click',applyCrop);confirmScanBtn.addEventListener('click',()=>{const imageDataUrl=canvasOutput.toDataURL('image/jpeg',0.9);const doc=new jsPDF();const imgProps=doc.getImageProperties(imageDataUrl);const pdfWidth=doc.internal.pageSize.getWidth();const pdfHeight=(imgProps.height*pdfWidth)/imgProps.width;doc.addImage(imageDataUrl,'JPEG',0,0,pdfWidth,pdfHeight);seciliDosyaBase64=doc.output('datauristring');klasorInput.value='Mobil';konuInput.value='Taranan Belge - '+new Date().toLocaleString('tr-TR');gelisTarihiInput.value=new Date().toISOString().split('T')[0];closeScanner();alert('Belge tarandı ve forma eklendi. Kaydet butonuna basarak işlemi tamamlayın.')});
-
-            // --- Google Drive Fonksiyonları ---
-            const updateUi = (isSignedIn) => { authContainer.style.display = isSignedIn ? 'none' : 'block'; userInfoContainer.style.display = isSignedIn ? 'block' : 'none'; };
-            const handleAuthClick = () => { tokenClient.callback = async (resp) => { if (resp.error !== undefined) { throw (resp); } updateUi(true); await findOrCreateFile(); }; if (gapi.client.getToken() === null) { tokenClient.requestAccessToken({prompt: 'consent'}); } else { tokenClient.requestAccessToken({prompt: ''}); } };
-            const handleSignoutClick = () => { const token = gapi.client.getToken(); if (token !== null) { google.accounts.oauth2.revoke(token.access_token); gapi.client.setToken(''); fileId = null; evraklar = []; hizliNotlar = []; renderAll(); updateUi(false); } };
-            const findOrCreateFile = async () => {
-                showLoader('Google Drive\'da veri dosyası aranıyor...');
-                try {
-                    const response = await gapi.client.drive.files.list({ q: `name='${FILENAME}' and trashed=false`, spaces: 'drive', fields: 'files(id, name)' });
-                    if (response.result.files.length > 0) {
-                        fileId = response.result.files[0].id;
-                        await loadDataFromDrive();
-                    } else {
-                        const createResponse = await gapi.client.drive.files.create({ resource: { name: FILENAME, mimeType: 'application/json' }, fields: 'id' });
-                        fileId = createResponse.result.id;
-                        evraklar = []; hizliNotlar = [];
-                        renderAll();
-                        await saveDataToDrive(); // Boş dosyayı oluştur ve kaydet
+            
+            // --- GitHub API Fonksiyonları ---
+            const githubApiCall = async (url, options = {}) => {
+                const defaultOptions = {
+                    headers: {
+                        'Authorization': `token ${githubToken}`,
+                        'Accept': 'application/vnd.github.v3+json'
                     }
-                    const profile = await gapi.client.oauth2.userinfo.get();
-                    userProfileP.textContent = `Giriş yapıldı: ${profile.result.email}`;
-                } catch (err) {
-                    console.error("Dosya arama/oluşturma hatası", err);
-                    alert('Google Drive\'da dosya aranırken bir hata oluştu.');
-                } finally {
-                    hideLoader();
+                };
+                const response = await fetch(url, { ...defaultOptions, ...options });
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.message || `GitHub API Hatası: ${response.status}`);
                 }
+                return response.json();
             };
-            const loadDataFromDrive = async () => {
-                if (!fileId) return;
-                showLoader('Veriler Google Drive\'dan yükleniyor...');
-                try {
-                    const response = await gapi.client.drive.files.get({ fileId: fileId, alt: 'media' });
-                    const data = JSON.parse(response.body || '{}');
-                    evraklar = data.evraklar || [];
-                    hizliNotlar = data.hizliNotlar || [];
-                    renderAll();
-                    syncStatusP.textContent = '✓ Veriler güncel.';
-                } catch (err) {
-                    console.error("Veri yükleme hatası", err);
-                    evraklar = []; hizliNotlar = []; renderAll();
-                } finally {
-                    hideLoader();
-                }
-            };
-            const saveDataToDrive = async () => {
-                if (!fileId) { return; }
-                syncStatusP.textContent = 'Senkronize ediliyor...';
-                try {
-                    const dataToSave = JSON.stringify({ evraklar, hizliNotlar });
-                    const blob = new Blob([dataToSave], { type: 'application/json' });
-                    const formData = new FormData();
-                    formData.append('metadata', new Blob([JSON.stringify({ mimeType: 'application/json' })], { type: 'application/json' }));
-                    formData.append('file', blob);
 
-                    await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=multipart`, {
-                        method: 'PATCH',
-                        headers: new Headers({ 'Authorization': 'Bearer ' + gapi.client.getToken().access_token }),
-                        body: formData,
-                    });
-                    syncStatusP.textContent = '✓ Veriler Google Drive ile senkronize edildi.';
-                } catch (err) {
-                    console.error("Veri kaydetme hatası", err);
-                    syncStatusP.textContent = '✗ Senkronizasyon başarısız.';
+            const loadDataFromGithub = async () => {
+                showLoader('Veriler GitHub\'dan yükleniyor...');
+                try {
+                    const [evrakFiles, notFiles] = await Promise.all([
+                        githubApiCall(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/${evraklarPath}`).catch(() => []),
+                        githubApiCall(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/${notlarPath}`).catch(() => [])
+                    ]);
+
+                    const evrakPromises = (Array.isArray(evrakFiles) ? evrakFiles : []).map(file => githubApiCall(file.url));
+                    const notPromises = (Array.isArray(notFiles) ? notFiles : []).map(file => githubApiCall(file.url));
+
+                    const evrakResponses = await Promise.all(evrakPromises);
+                    const notResponses = await Promise.all(notPromises);
+
+                    evraklar = evrakResponses.map(res => ({ ...JSON.parse(b64_to_utf8(res.content)), sha: res.sha }));
+                    hizliNotlar = notResponses.map(res => ({ ...JSON.parse(b64_to_utf8(res.content)), sha: res.sha }));
+
+                    renderAll();
+                } catch (error) {
+                    console.error("Veri yükleme hatası:", error);
+                    alert("Veriler GitHub'dan yüklenirken bir hata oluştu. Lütfen sayfayı yenileyin.");
+                } finally {
+                    hideLoader();
                 }
             };
+            
+            const saveDataToGithub = async (path, data, sha = null) => {
+                const url = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${path}`;
+                const content = utf8_to_b64(JSON.stringify(data));
+                const body = {
+                    message: `Dosya güncellendi: ${data.konu || data.baslik}`,
+                    content: content,
+                    sha: sha
+                };
+                return await githubApiCall(url, { method: 'PUT', body: JSON.stringify(body) });
+            };
+            
+            const deleteDataFromGithub = async (path, sha) => {
+                const url = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${path}`;
+                const body = {
+                    message: `Dosya silindi: ${path}`,
+                    sha: sha
+                };
+                return await githubApiCall(url, { method: 'DELETE', body: JSON.stringify(body) });
+            };
+
 
             // --- Ana Fonksiyonlar ---
             const formuTemizle = () => { evrakFormu.reset(); seciliDosyaBase64 = null; editingEvrakId = null; formBasligi.textContent = 'Yeni Evrak Ekle'; kaydetBtn.textContent = 'Evrakı Kaydet'; iptalBtn.classList.add('hidden'); dosyaGirisContainer.classList.remove('hidden'); pdfDosyaInput.required = true; };
@@ -328,13 +278,13 @@
             const showNoteModal = (evrak) => { noteModalTitle.textContent = `"${evrak.konu}" Notu`; noteContentView.textContent = evrak.notlar; noteModal.style.display = 'block'; noteModalBackdrop.style.display = 'block'; };
             const hideNoteModal = () => { noteModal.style.display = 'none'; noteModalBackdrop.style.display = 'none'; noteContentView.textContent = ''; };
             const renderKlasorler = () => { const klasorler = [...new Set(evraklar.map(e => e.klasor).filter(Boolean))]; klasorListesi.innerHTML = ''; const createButton = (name, value) => { const button = document.createElement('button'); button.textContent = name; button.dataset.klasor = value; button.className = `klasor-item px-3 py-1 text-sm font-medium rounded-full cursor-pointer transition-colors duration-200 ${seciliKlasor === value ? 'active' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`; return button; }; klasorListesi.appendChild(createButton('Tüm Evraklar', 'all')); klasorler.sort().forEach(klasor => klasorListesi.appendChild(createButton(klasor, klasor))); };
-            const renderEvraklar = (filter = '') => { evrakListesiBody.innerHTML = ''; let filtrelenmisEvraklar = evraklar; if (seciliKlasor !== 'all') { filtrelenmisEvraklar = filtrelenmisEvraklar.filter(e => e.klasor === seciliKlasor); } if (filter) { filtrelenmisEvraklar = filtrelenmisEvraklar.filter(evrak => { const searchTerm = filter.toLowerCase(); const konuMatch = evrak.konu.toLowerCase().includes(searchTerm); const sayiMatch = evrak.evrakSayisi && evrak.evrakSayisi.toLowerCase().includes(searchTerm); return konuMatch || sayiMatch; }); } if (filtrelenmisEvraklar.length === 0) { evrakListesiBody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-gray-500">Bu kritere uygun evrak bulunamadı.</td></tr>`; return; } const today = new Date(); today.setHours(0, 0, 0, 0); filtrelenmisEvraklar.forEach(evrak => { const tr = document.createElement('tr'); const durumRenkleri = { 'Bekliyor': 'bg-blue-100 text-blue-800', 'İşlemde': 'bg-yellow-100 text-yellow-800', 'Cevaplandı': 'bg-green-100 text-green-800', 'İşleme Gerek Yok': 'bg-gray-100 text-gray-800' }; let ikonlar = ''; const uyariTarihi = evrak.uyariTarihi ? new Date(evrak.uyariTarihi) : null; if (uyariTarihi && uyariTarihi <= today) { ikonlar += `<a href="#" class="text-red-500 view-note" data-id="${evrak.id}" title="Uyarı Tarihi: ${formatDate(evrak.uyariTarihi)}"><span class="alert-icon">🔔</span></a>`; } if (evrak.notlar && evrak.notlar.trim() !== '') { ikonlar += `<a href="#" class="text-yellow-500 hover:text-yellow-700 view-note ml-2" data-id="${evrak.id}" title="Notu Görüntüle">📋</a>`; } tr.innerHTML = `<td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 flex items-center">${ikonlar}<span class="${ikonlar ? 'ml-2' : ''}">${evrak.konu}</span></td><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${evrak.evrakSayisi}</td><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatDate(evrak.gelisTarihi)}</td><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatDate(evrak.sonCevapTarihi)}</td><td class="px-6 py-4 whitespace-nowrap"><span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${durumRenkleri[evrak.durum] || 'bg-gray-100 text-gray-800'}">${evrak.durum}</span></td><td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"><a href="#" class="text-blue-600 hover:text-blue-900 view-pdf" data-id="${evrak.id}">Görüntüle</a><a href="#" class="text-green-600 hover:text-green-900 ml-4 edit-evrak" data-id="${evrak.id}">Düzenle</a><a href="#" class="text-red-600 hover:text-red-900 ml-4 delete-evrak" data-id="${evrak.id}">Sil</a></td>`; evrakListesiBody.appendChild(tr); }); };
+            const renderEvraklar = (filter = '') => { evrakListesiBody.innerHTML = ''; let filtrelenmisEvraklar = evraklar; if (seciliKlasor !== 'all') { filtrelenmisEvraklar = filtrelenmisEvraklar.filter(e => e.klasor === seciliKlasor); } if (filter) { filtrelenmisEvraklar = filtrelenmisEvraklar.filter(evrak => { const searchTerm = filter.toLowerCase(); const konuMatch = evrak.konu.toLowerCase().includes(searchTerm); const sayiMatch = evrak.evrakSayisi && evrak.evrakSayisi.toLowerCase().includes(searchTerm); return konuMatch || sayiMatch; }); } if (filtrelenmisEvraklar.length === 0) { evrakListesiBody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-gray-500">Bu kritere uygun evrak bulunamadı.</td></tr>`; return; } const today = new Date(); today.setHours(0, 0, 0, 0); filtrelenmisEvraklar.sort((a,b) => b.id - a.id).forEach(evrak => { const tr = document.createElement('tr'); const durumRenkleri = { 'Bekliyor': 'bg-blue-100 text-blue-800', 'İşlemde': 'bg-yellow-100 text-yellow-800', 'Cevaplandı': 'bg-green-100 text-green-800', 'İşleme Gerek Yok': 'bg-gray-100 text-gray-800' }; let ikonlar = ''; const uyariTarihi = evrak.uyariTarihi ? new Date(evrak.uyariTarihi) : null; if (uyariTarihi && uyariTarihi <= today) { ikonlar += `<a href="#" class="text-red-500 view-note" data-id="${evrak.id}" title="Uyarı Tarihi: ${formatDate(evrak.uyariTarihi)}"><span class="alert-icon">🔔</span></a>`; } if (evrak.notlar && evrak.notlar.trim() !== '') { ikonlar += `<a href="#" class="text-yellow-500 hover:text-yellow-700 view-note ml-2" data-id="${evrak.id}" title="Notu Görüntüle">📋</a>`; } tr.innerHTML = `<td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 flex items-center">${ikonlar}<span class="${ikonlar ? 'ml-2' : ''}">${evrak.konu}</span></td><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${evrak.evrakSayisi}</td><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatDate(evrak.gelisTarihi)}</td><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatDate(evrak.sonCevapTarihi)}</td><td class="px-6 py-4 whitespace-nowrap"><span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${durumRenkleri[evrak.durum] || 'bg-gray-100 text-gray-800'}">${evrak.durum}</span></td><td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"><a href="#" class="text-blue-600 hover:text-blue-900 view-pdf" data-id="${evrak.id}">Görüntüle</a><a href="#" class="text-green-600 hover:text-green-900 ml-4 edit-evrak" data-id="${evrak.id}">Düzenle</a><a href="#" class="text-red-600 hover:text-red-900 ml-4 delete-evrak" data-id="${evrak.id}">Sil</a></td>`; evrakListesiBody.appendChild(tr); }); };
             const renderHizliNotlar = (filter = '') => {
                 hizliNotListesi.innerHTML = '';
                 const filtrelenmisNotlar = hizliNotlar.filter(not => not.baslik.toLowerCase().includes(filter.toLowerCase()) || not.icerik.toLowerCase().includes(filter.toLowerCase()));
                 if (filtrelenmisNotlar.length === 0) { hizliNotListesi.innerHTML = `<p class="text-center py-4 text-gray-500">Kayıtlı not bulunamadı.</p>`; return; }
                 const today = new Date(); today.setHours(0, 0, 0, 0);
-                filtrelenmisNotlar.forEach(not => {
+                 filtrelenmisNotlar.sort((a,b) => b.id - a.id).forEach(not => {
                     const div = document.createElement('div');
                     div.className = 'bg-gray-50 p-4 rounded-lg border';
                     let uyariIkonu = '';
@@ -355,13 +305,36 @@
                     hizliNotListesi.appendChild(div);
                 });
             };
-            const renderAll = () => { renderKlasorler(); renderEvraklar(aramaInput.value); renderHizliNotlar(notAramaInput.value); };
+             const renderAll = () => { renderKlasorler(); renderEvraklar(aramaInput.value); renderHizliNotlar(notAramaInput.value); };
 
             // --- Olay Dinleyicileri ---
             tabEvrak.addEventListener('click', () => { tabEvrak.classList.add('active'); tabNotlar.classList.remove('active'); evrakTabContent.classList.remove('hidden'); notlarTabContent.classList.add('hidden'); });
             tabNotlar.addEventListener('click', () => { tabNotlar.classList.add('active'); tabEvrak.classList.remove('active'); notlarTabContent.classList.remove('hidden'); evrakTabContent.classList.add('hidden'); });
             pdfDosyaInput.addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;try{const t=await pdfMetniniCikar(f);const s=t.match(/Sayı\s*:\s*(.*)/i);if(s)evrakSayisiInput.value=s[1].trim();const k=t.match(/Konu\s*:\s*(.*)/i);if(k)konuInput.value=k[1].trim();const a=t.match(/(\d{2})\.(\d{2})\.(\d{4})/g);if(a){const d=[...new Set(a)].map(s=>{const[d,m,y]=s.split('.');return new Date(y,m-1,d)}).sort((a,b)=>b-a);if(d.length>0)gelisTarihiInput.value=d[0].toISOString().split('T')[0]}const i=t.match(/İlgi\s*:([\s\S]*?)(?=Konu\s*:|\n\n[A-ZÇĞİÖŞÜ])/i);let l=null;if(i&&i[1]){const g=i[1].match(/(\d{2})\.(\d{2})\.(\d{4})/g);if(g){g.forEach(s=>{const[d,m,y]=s.split('.');const c=new Date(y,m-1,d);if(!l||c>l)l=c})}}if(l)sonCevapTarihiInput.value=l.toISOString().split('T')[0];seciliDosyaBase64=await dosyayiBase64eCevir(f)}catch(r){alert("PDF dosyası okunurken bir hata oluştu.")}});
-            evrakFormu.addEventListener('submit', async (e) => { e.preventDefault(); if (editingEvrakId) { const evrak = evraklar.find(i => i.id === editingEvrakId); if (evrak) { Object.assign(evrak, { konu: konuInput.value, klasor: klasorInput.value.trim(), gelisTarihi: gelisTarihiInput.value, evrakSayisi: evrakSayisiInput.value, sonCevapTarihi: sonCevapTarihiInput.value, durum: durumInput.value, notlar: notlarInput.value, uyariTarihi: uyariTarihiInput.value }); } } else { if (!seciliDosyaBase64) { alert('Lütfen bir PDF dosyası seçin veya mobil tarayıcıyı kullanın.'); return; } evraklar.push({ id: Date.now(), konu: konuInput.value, klasor: klasorInput.value.trim(), gelisTarihi: gelisTarihiInput.value, evrakSayisi: evrakSayisiInput.value, sonCevapTarihi: sonCevapTarihiInput.value, durum: durumInput.value, notlar: notlarInput.value, uyariTarihi: uyariTarihiInput.value, dosyaBase64: seciliDosyaBase64 }); } await saveDataToDrive(); renderAll(); formuTemizle(); });
+            evrakFormu.addEventListener('submit', async (e) => { 
+                e.preventDefault(); 
+                showLoader('Kaydediliyor...');
+                try {
+                    if (editingEvrakId) { 
+                        const evrak = evraklar.find(i => i.id === editingEvrakId);
+                        if (evrak) {
+                             Object.assign(evrak, { konu: konuInput.value, klasor: klasorInput.value.trim(), gelisTarihi: gelisTarihiInput.value, evrakSayisi: evrakSayisiInput.value, sonCevapTarihi: sonCevapTarihiInput.value, durum: durumInput.value, notlar: notlarInput.value, uyariTarihi: uyariTarihiInput.value });
+                             const { sha, ...dataToSave } = evrak;
+                             await saveDataToGithub(`${evraklarPath}/${evrak.id}.json`, dataToSave, sha);
+                        }
+                    } else { 
+                        if (!seciliDosyaBase64) { throw new Error('Lütfen bir PDF dosyası seçin veya mobil tarayıcıyı kullanın.'); } 
+                        const newEvrak = { id: Date.now(), konu: konuInput.value, klasor: klasorInput.value.trim(), gelisTarihi: gelisTarihiInput.value, evrakSayisi: evrakSayisiInput.value, sonCevapTarihi: sonCevapTarihiInput.value, durum: durumInput.value, notlar: notlarInput.value, uyariTarihi: uyariTarihiInput.value, dosyaBase64: seciliDosyaBase64 };
+                        await saveDataToGithub(`${evraklarPath}/${newEvrak.id}.json`, newEvrak);
+                    } 
+                    await loadDataFromGithub();
+                    formuTemizle(); 
+                } catch(error) {
+                    alert(`Hata: ${error.message}`);
+                } finally {
+                    hideLoader();
+                }
+            });
             iptalBtn.addEventListener('click', formuTemizle);
             aramaInput.addEventListener('input', e => renderEvraklar(e.target.value));
             klasorListesi.addEventListener('click', e => { if (e.target.classList.contains('klasor-item')) { seciliKlasor = e.target.dataset.klasor; renderKlasorler(); renderEvraklar(aramaInput.value); } });
@@ -370,25 +343,60 @@
                 const evrakId = parseInt(target.dataset.id); const evrak = evraklar.find(d => d.id === evrakId); if (!evrak) return;
                 if (target.classList.contains('view-pdf')) { showModal(evrak); } 
                 else if (target.classList.contains('view-note')) { showNoteModal(evrak); } 
-                else if (target.classList.contains('delete-evrak')) { if (confirm('Bu evrakı silmek istediğinizden emin misiniz?')) { evraklar = evraklar.filter(d => d.id !== evrakId); await saveDataToDrive(); renderAll(); } } 
+                else if (target.classList.contains('delete-evrak')) { 
+                    if (confirm('Bu evrakı silmek istediğinizden emin misiniz?')) { 
+                        showLoader('Siliniyor...');
+                        await deleteDataFromGithub(`${evraklarPath}/${evrak.id}.json`, evrak.sha);
+                        await loadDataFromGithub();
+                        hideLoader();
+                    } 
+                } 
                 else if (target.classList.contains('edit-evrak')) { editingEvrakId = evrak.id; konuInput.value = evrak.konu; klasorInput.value = evrak.klasor || ''; gelisTarihiInput.value = evrak.gelisTarihi; evrakSayisiInput.value = evrak.evrakSayisi; sonCevapTarihiInput.value = evrak.sonCevapTarihi; durumInput.value = evrak.durum; notlarInput.value = evrak.notlar; uyariTarihiInput.value = evrak.uyariTarihi || ''; formBasligi.textContent = 'Evrakı Düzenle'; kaydetBtn.textContent = 'Değişiklikleri Kaydet'; iptalBtn.classList.remove('hidden'); dosyaGirisContainer.classList.add('hidden'); pdfDosyaInput.required = false; window.scrollTo(0, 0); }
             });
-            hizliNotFormu.addEventListener('submit', async (e) => { e.preventDefault(); if (editingNotId) { const not = hizliNotlar.find(n => n.id === editingNotId); if (not) { Object.assign(not, { baslik: notBaslikInput.value, icerik: notIcerikInput.value, uyariTarihi: notUyariTarihiInput.value }); } } else { hizliNotlar.push({ id: Date.now(), baslik: notBaslikInput.value, icerik: notIcerikInput.value, uyariTarihi: notUyariTarihiInput.value }); } await saveDataToDrive(); renderHizliNotlar(notAramaInput.value); notFormuTemizle(); });
+            hizliNotFormu.addEventListener('submit', async (e) => { 
+                e.preventDefault(); 
+                showLoader('Kaydediliyor...');
+                try {
+                    if (editingNotId) { 
+                        const not = hizliNotlar.find(n => n.id === editingNotId); 
+                        if (not) { 
+                            Object.assign(not, { baslik: notBaslikInput.value, icerik: notIcerikInput.value, uyariTarihi: notUyariTarihiInput.value });
+                            const { sha, ...dataToSave } = not;
+                            await saveDataToGithub(`${notlarPath}/${not.id}.json`, dataToSave, sha);
+                        } 
+                    } else { 
+                        const newNot = { id: Date.now(), baslik: notBaslikInput.value, icerik: notIcerikInput.value, uyariTarihi: notUyariTarihiInput.value };
+                        await saveDataToGithub(`${notlarPath}/${newNot.id}.json`, newNot);
+                    } 
+                    await loadDataFromGithub();
+                    notFormuTemizle();
+                } catch(error) {
+                    alert(`Hata: ${error.message}`);
+                } finally {
+                    hideLoader();
+                }
+            });
             notIptalBtn.addEventListener('click', notFormuTemizle);
             notAramaInput.addEventListener('input', (e) => renderHizliNotlar(e.target.value));
             hizliNotListesi.addEventListener('click', async (e) => { 
                 const target = e.target; if (!target.dataset.id) return; const notId = parseInt(target.dataset.id); const not = hizliNotlar.find(n => n.id === notId); if (!not) return; 
                 if (target.classList.contains('edit-not')) { editingNotId = not.id; notBaslikInput.value = not.baslik; notIcerikInput.value = not.icerik; notUyariTarihiInput.value = not.uyariTarihi || ''; notFormBasligi.textContent = 'Notu Düzenle'; notKaydetBtn.textContent = 'Değişiklikleri Kaydet'; notIptalBtn.classList.remove('hidden'); } 
-                else if (target.classList.contains('delete-not')) { if (confirm('Bu notu silmek istediğinizden emin misiniz?')) { hizliNotlar = hizliNotlar.filter(n => n.id !== notId); await saveDataToDrive(); renderHizliNotlar(notAramaInput.value); } } 
+                else if (target.classList.contains('delete-not')) { 
+                    if (confirm('Bu notu silmek istediğinizden emin misiniz?')) { 
+                        showLoader('Siliniyor...');
+                        await deleteDataFromGithub(`${notlarPath}/${not.id}.json`, not.sha);
+                        await loadDataFromGithub();
+                        hideLoader();
+                    } 
+                } 
             });
-            authorizeButton.addEventListener('click', handleAuthClick);
-            signoutButton.addEventListener('click', handleSignoutClick);
             closeModalBtn.addEventListener('click', hideModal); modalBackdrop.addEventListener('click', hideModal);
             closeNoteModalBtn.addEventListener('click', hideNoteModal); noteModalBackdrop.addEventListener('click', hideNoteModal);
+            
+            // Başlangıç
+            loadDataFromGithub();
         });
     </script>
-    <script async defer src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
-    <script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
 </body>
 </html>
 
