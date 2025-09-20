@@ -243,8 +243,17 @@
             async function initFirebase() {
                 showLoader('Veritabanına bağlanılıyor...');
                 try {
+                    if (typeof __firebase_config === 'undefined' || __firebase_config === '{}') {
+                        throw new Error("Firebase yapılandırma bilgileri platform tarafından sağlanamadı. Lütfen sayfayı yenileyin veya bir yetkiliyle görüşün.");
+                    }
+
                     appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-                    const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+                    const firebaseConfig = JSON.parse(__firebase_config);
+                    
+                    if (!firebaseConfig.apiKey) {
+                        throw new Error("Geçersiz Firebase yapılandırması: API anahtarı eksik.");
+                    }
+
                     const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
                     const app = initializeApp(firebaseConfig);
@@ -266,7 +275,8 @@
 
                 } catch (error) {
                     console.error("Firebase başlatma hatası:", error);
-                    alert("Uygulama başlatılamadı. Veritabanı bağlantısı kurulamadı. Lütfen sayfayı yenileyin.");
+                    alert(`Uygulama başlatılamadı: ${error.message}`);
+                    document.querySelectorAll('button, input, select, textarea').forEach(el => el.disabled = true);
                 } finally {
                     hideLoader();
                 }
