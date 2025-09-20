@@ -33,6 +33,8 @@
         #magnifier::before, #magnifier::after { content: ''; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); background: #00f; }
         #magnifier::before { width: 30px; height: 2px; }
         #magnifier::after { width: 2px; height: 30px; }
+        .alert-icon { animation: ring 1.5s ease-in-out infinite; }
+        @keyframes ring { 0%, 100% { transform: rotate(0); } 10%, 30%, 50%, 70%, 90% { transform: rotate(-10deg); } 20%, 40%, 60%, 80% { transform: rotate(10deg); } }
     </style>
 </head>
 <body class="bg-gray-100 text-gray-800">
@@ -92,6 +94,10 @@
                     <div>
                         <label for="notlar" class="block text-sm font-medium text-gray-600">Notlar</label>
                         <textarea id="notlar" name="notlar" rows="3" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm"></textarea>
+                    </div>
+                    <div>
+                        <label for="uyariTarihi" class="block text-sm font-medium text-gray-600">Uyarı Tarihi (Hatırlatıcı)</label>
+                        <input type="date" id="uyariTarihi" name="uyariTarihi" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm">
                     </div>
                     <div class="flex space-x-2">
                         <button type="submit" id="kaydetBtn" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-md hover:bg-blue-700">Evrakı Kaydet</button>
@@ -186,6 +192,7 @@
         const sonCevapTarihiInput = document.getElementById('sonCevapTarihi');
         const durumInput = document.getElementById('durum');
         const notlarInput = document.getElementById('notlar');
+        const uyariTarihiInput = document.getElementById('uyariTarihi'); // Yeni
         const evrakListesiBody = document.getElementById('evrakListesi');
         const klasorListesi = document.getElementById('klasorListesi');
         const aramaInput = document.getElementById('arama');
@@ -453,25 +460,12 @@
             alert('Belge tarandı ve forma eklendi. Kaydet butonuna basarak işlemi tamamlayın.');
         });
         
-        // --- Mevcut Fonksiyonlar (Güvenlik Güncellemesi ile) ---
-        const showLoader = (message) => {
-            loader.textContent = message;
-            loader.style.display = 'block';
-        };
-        const hideLoader = () => {
-            loader.style.display = 'none';
-        };
-        const formatDate = (dateString) => {
-            if (!dateString) return '';
-            const [year, month, day] = dateString.split('-');
-            return `${day}.${month}.${year}`;
-        };
-        const utf8_to_b64 = (str) => {
-            return btoa(unescape(encodeURIComponent(str)));
-        };
-        const b64_to_utf8 = (str) => {
-            return decodeURIComponent(escape(atob(str)));
-        };
+        // --- Mevcut Fonksiyonlar (Düzeltmelerle) ---
+        const showLoader = (message) => { loader.textContent = message; loader.style.display = 'block'; };
+        const hideLoader = () => { loader.style.display = 'none'; };
+        const formatDate = (dateString) => { if (!dateString) return ''; const [year, month, day] = dateString.split('-'); return `${day}.${month}.${year}`; };
+        const utf8_to_b64 = (str) => btoa(unescape(encodeURIComponent(str)));
+        const b64_to_utf8 = (str) => decodeURIComponent(escape(atob(str)));
         const formuTemizle = () => {
             evrakFormu.reset();
             seciliDosyaBase64 = null;
@@ -482,68 +476,33 @@
             pdfInputContainer.parentElement.parentElement.classList.remove('hidden');
             pdfDosyaInput.required = true;
         };
-        const dosyayiBase64eCevir = (file) => {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.readAsDataURL(file);
-                reader.onload = () => resolve(reader.result);
-                reader.onerror = error => reject(error);
-            });
-        };
-        const pdfMetniniCikar = (file) => {
-            return new Promise((resolve, reject) => {
-                const fileReader = new FileReader();
-                fileReader.readAsArrayBuffer(file);
-                fileReader.onload = async () => {
-                    const typedarray = new Uint8Array(fileReader.result);
-                    try {
-                        const pdf = await pdfjsLib.getDocument(typedarray).promise;
-                        let fullText = '';
-                        for (let i = 1; i <= pdf.numPages; i++) {
-                            const page = await pdf.getPage(i);
-                            const textContent = await page.getTextContent();
-                            fullText += textContent.items.map(item => item.str).join('\n');
-                        }
-                        resolve(fullText);
-                    } catch (error) {
-                        reject(error);
+        const dosyayiBase64eCevir = (file) => new Promise((resolve, reject) => { const reader = new FileReader(); reader.readAsDataURL(file); reader.onload = () => resolve(reader.result); reader.onerror = error => reject(error); });
+        const pdfMetniniCikar = (file) => new Promise((resolve, reject) => {
+            const fileReader = new FileReader();
+            fileReader.readAsArrayBuffer(file);
+            fileReader.onload = async () => {
+                const typedarray = new Uint8Array(fileReader.result);
+                try {
+                    const pdf = await pdfjsLib.getDocument(typedarray).promise;
+                    let fullText = '';
+                    for (let i = 1; i <= pdf.numPages; i++) {
+                        const page = await pdf.getPage(i);
+                        const textContent = await page.getTextContent();
+                        fullText += textContent.items.map(item => item.str).join('\n');
                     }
-                };
-                fileReader.onerror = reject;
-            });
-        };
-        const showModal = (evrak) => {
-            modalTitle.textContent = evrak.konu;
-            pdfFrame.src = evrak.dosyaBase64;
-            modal.style.display = 'block';
-            modalBackdrop.style.display = 'block';
-        };
-        const hideModal = () => {
-            modal.style.display = 'none';
-            modalBackdrop.style.display = 'none';
-            pdfFrame.src = '';
-        };
-        const showNoteModal = (evrak) => {
-            noteModalTitle.textContent = `"${evrak.konu}" Notu`;
-            noteContentView.textContent = evrak.notlar;
-            noteModal.style.display = 'block';
-            noteModalBackdrop.style.display = 'block';
-        };
-        const hideNoteModal = () => {
-            noteModal.style.display = 'none';
-            noteModalBackdrop.style.display = 'none';
-            noteContentView.textContent = '';
-        };
+                    resolve(fullText);
+                } catch (error) { reject(error); }
+            };
+            fileReader.onerror = reject;
+        });
+        const showModal = (evrak) => { modalTitle.textContent = evrak.konu; pdfFrame.src = evrak.dosyaBase64; modal.style.display = 'block'; modalBackdrop.style.display = 'block'; };
+        const hideModal = () => { modal.style.display = 'none'; modalBackdrop.style.display = 'none'; pdfFrame.src = ''; };
+        const showNoteModal = (evrak) => { noteModalTitle.textContent = `"${evrak.konu}" Notu`; noteContentView.textContent = evrak.notlar; noteModal.style.display = 'block'; noteModalBackdrop.style.display = 'block'; };
+        const hideNoteModal = () => { noteModal.style.display = 'none'; noteModalBackdrop.style.display = 'none'; noteContentView.textContent = ''; };
         const renderKlasorler = () => {
             const klasorler = [...new Set(evraklar.map(e => e.klasor).filter(Boolean))];
             klasorListesi.innerHTML = '';
-            const createButton = (name, value) => {
-                const button = document.createElement('button');
-                button.textContent = name;
-                button.dataset.klasor = value;
-                button.className = `klasor-item px-3 py-1 text-sm font-medium rounded-full cursor-pointer transition-colors duration-200 ${seciliKlasor === value ? 'active' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`;
-                return button;
-            };
+            const createButton = (name, value) => { const button = document.createElement('button'); button.textContent = name; button.dataset.klasor = value; button.className = `klasor-item px-3 py-1 text-sm font-medium rounded-full cursor-pointer transition-colors duration-200 ${seciliKlasor === value ? 'active' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`; return button; };
             klasorListesi.appendChild(createButton('Tüm Evraklar', 'all'));
             klasorler.sort().forEach(klasor => klasorListesi.appendChild(createButton(klasor, klasor)));
         };
@@ -551,102 +510,147 @@
         const renderEvraklar = (filter = '') => {
             evrakListesiBody.innerHTML = '';
             let filtrelenmisEvraklar = evraklar;
-            if (seciliKlasor !== 'all') {
-                filtrelenmisEvraklar = filtrelenmisEvraklar.filter(e => e.klasor === seciliKlasor);
-            }
-            if (filter) {
-                filtrelenmisEvraklar = filtrelenmisEvraklar.filter(evrak => {
-                    const searchTerm = filter.toLowerCase();
-                    const konuMatch = evrak.konu.toLowerCase().includes(searchTerm);
-                    const sayiMatch = evrak.evrakSayisi && evrak.evrakSayisi.toLowerCase().includes(searchTerm);
-                    return konuMatch || sayiMatch;
-                });
-            }
-            if (filtrelenmisEvraklar.length === 0) {
-                evrakListesiBody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-gray-500">Bu kritere uygun evrak bulunamadı.</td></tr>`;
-                return;
-            }
+            if (seciliKlasor !== 'all') { filtrelenmisEvraklar = filtrelenmisEvraklar.filter(e => e.klasor === seciliKlasor); }
+            if (filter) { filtrelenmisEvraklar = filtrelenmisEvraklar.filter(evrak => { const searchTerm = filter.toLowerCase(); const konuMatch = evrak.konu.toLowerCase().includes(searchTerm); const sayiMatch = evrak.evrakSayisi && evrak.evrakSayisi.toLowerCase().includes(searchTerm); return konuMatch || sayiMatch; }); }
+            if (filtrelenmisEvraklar.length === 0) { evrakListesiBody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-gray-500">Bu kritere uygun evrak bulunamadı.</td></tr>`; return; }
+            
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
             filtrelenmisEvraklar.forEach(evrak => {
                 const tr = document.createElement('tr');
-                const durumRenkleri = {
-                    'Bekliyor': 'bg-blue-100 text-blue-800',
-                    'İşlemde': 'bg-yellow-100 text-yellow-800',
-                    'Cevaplandı': 'bg-green-100 text-green-800',
-                    'İşleme Gerek Yok': 'bg-gray-100 text-gray-800'
-                };
-                let notIkonu = '';
-                if (evrak.notlar && evrak.notlar.trim() !== '') {
-                    notIkonu = `<a href="#" class="text-yellow-500 hover:text-yellow-700 view-note" data-id="${evrak.id}" title="Notu Görüntüle"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline-block" viewBox="0 0 20 20" fill="currentColor"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" /><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd" /></svg></a>`;
+                const durumRenkleri = { 'Bekliyor': 'bg-blue-100 text-blue-800', 'İşlemde': 'bg-yellow-100 text-yellow-800', 'Cevaplandı': 'bg-green-100 text-green-800', 'İşleme Gerek Yok': 'bg-gray-100 text-gray-800' };
+                let ikonlar = '';
+                
+                const uyariTarihi = evrak.uyariTarihi ? new Date(evrak.uyariTarihi) : null;
+                if (uyariTarihi && uyariTarihi <= today) {
+                    ikonlar += `<a href="#" class="text-red-500 view-note" data-id="${evrak.id}" title="Uyarı Tarihi: ${formatDate(evrak.uyariTarihi)}"><span class="alert-icon">🔔</span></a>`;
                 }
-                tr.innerHTML = `<td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 flex items-center">${notIkonu}<span class="${notIkonu ? 'ml-2' : ''}">${evrak.konu}</span></td><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${evrak.evrakSayisi}</td><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatDate(evrak.gelisTarihi)}</td><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatDate(evrak.sonCevapTarihi)}</td><td class="px-6 py-4 whitespace-nowrap"><span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${durumRenkleri[evrak.durum] || 'bg-gray-100 text-gray-800'}">${evrak.durum}</span></td><td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"><a href="#" class="text-blue-600 hover:text-blue-900 view-pdf" data-id="${evrak.id}">Görüntüle</a><a href="#" class="text-green-600 hover:text-green-900 ml-4 edit-evrak" data-id="${evrak.id}">Düzenle</a><a href="#" class="text-red-600 hover:text-red-900 ml-4 delete-evrak" data-id="${evrak.id}">Sil</a></td>`;
+
+                if (evrak.notlar && evrak.notlar.trim() !== '') {
+                    ikonlar += `<a href="#" class="text-yellow-500 hover:text-yellow-700 view-note ml-2" data-id="${evrak.id}" title="Notu Görüntüle">📋</a>`;
+                }
+
+                tr.innerHTML = `<td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 flex items-center">${ikonlar}<span class="${ikonlar ? 'ml-2' : ''}">${evrak.konu}</span></td><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${evrak.evrakSayisi}</td><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatDate(evrak.gelisTarihi)}</td><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatDate(evrak.sonCevapTarihi)}</td><td class="px-6 py-4 whitespace-nowrap"><span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${durumRenkleri[evrak.durum] || 'bg-gray-100 text-gray-800'}">${evrak.durum}</span></td><td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"><a href="#" class="text-blue-600 hover:text-blue-900 view-pdf" data-id="${evrak.id}">Görüntüle</a><a href="#" class="text-green-600 hover:text-green-900 ml-4 edit-evrak" data-id="${evrak.id}">Düzenle</a><a href="#" class="text-red-600 hover:text-red-900 ml-4 delete-evrak" data-id="${evrak.id}">Sil</a></td>`;
                 evrakListesiBody.appendChild(tr);
             });
         };
         
         const loadEvraklarFromGithub=async()=>{
             showLoader('Evraklar GitHub\'dan yükleniyor...');
-            dataLoadedSuccessfully = false; // Her yüklemede kilidi sıfırla
+            dataLoadedSuccessfully = false; 
             try{
                 const r=await fetch(`${apiUrl}?t=${new Date().getTime()}`,{headers:{'Authorization':`token ${githubToken}`,'Accept':'application/vnd.github.v3+json'}});
                 if(r.status===404){
-                    evraklar=[]; evraklarSha=null;
-                    dataLoadedSuccessfully = true; // Dosya yoksa bu geçerli bir durum, kilidi aç
+                    evraklar=[]; evraklarSha=null; dataLoadedSuccessfully = true; 
                 } else if(r.ok){
-                    const d=await r.json();
-                    evraklarSha=d.sha;
-                    const c=b64_to_utf8(d.content);
+                    const d=await r.json(); evraklarSha=d.sha; const c=b64_to_utf8(d.content);
                     if(c){
-                        try{
-                            evraklar=JSON.parse(c);
-                            dataLoadedSuccessfully = true; // Veri başarıyla okundu, kilidi aç
-                        } catch(e){
-                            alert("GitHub'daki evraklar.json dosyası okunamaz halde. Veri kaybını önlemek için işlemler durduruldu.");
-                        }
-                    } else {
-                        evraklar=[];
-                        dataLoadedSuccessfully = true; // Dosya boş, bu geçerli bir durum, kilidi aç
-                    }
-                } else {
-                    throw new Error(`GitHub API Hatası: ${(await r.json()).message}`);
-                }
+                        try{ evraklar=JSON.parse(c); dataLoadedSuccessfully = true; } 
+                        catch(e){ alert("GitHub'daki evraklar.json dosyası okunamaz halde. Veri kaybını önlemek için işlemler durduruldu."); }
+                    } else { evraklar=[]; dataLoadedSuccessfully = true; }
+                } else { throw new Error(`GitHub API Hatası: ${(await r.json()).message}`); }
             } catch(e){
                 alert(`Evraklar GitHub'dan yüklenemedi: ${e.message}. Veri kaybını önlemek için kayıt özellikleri devre dışı bırakıldı. Lütfen sayfayı yenileyip tekrar deneyin.`);
-            } finally{
-                renderKlasorler();
-                renderEvraklar();
-                hideLoader();
-            }
+            } finally{ renderKlasorler(); renderEvraklar(); hideLoader(); }
         };
 
         const confirmDataIsSynced=async(t)=>{let a=0;const m=10;const l=1000;while(a<m){try{const r=await fetch(`${apiUrl}?t=${new Date().getTime()}`,{headers:{'Authorization':`token ${githubToken}`,'Accept':'application/vnd.github.v3+json'}});if(r.ok){const d=await r.json();if(d.sha===t){evraklarSha=d.sha;evraklar=JSON.parse(b64_to_utf8(d.content))||[];return}}}catch(e){console.error("Doğrulama denemesi başarısız:",e)}a++;await new Promise(r=>setTimeout(r,l))}console.warn("Veri senkronizasyonu zaman aşımına uğradı.");evraklarSha=t};
         
         const saveEvraklarToGithub=async()=>{
-            if (!dataLoadedSuccessfully) {
-                alert('Veriler başlangıçta düzgün yüklenemedi. Veri kaybını önlemek için kayıt işlemi durduruldu. Lütfen sayfayı yenileyin.');
-                return;
-            }
+            if (!dataLoadedSuccessfully) { alert('Veriler başlangıçta düzgün yüklenemedi. Veri kaybını önlemek için kayıt işlemi durduruldu. Lütfen sayfayı yenileyin.'); return; }
             showLoader('Değişiklikler GitHub\'a kaydediliyor...');
             try{
                 const c=utf8_to_b64(JSON.stringify(evraklar,null,2));
                 const b={message:`Evrak listesi güncellendi - ${new Date().toISOString()}`,content:c,sha:evraklarSha};
                 const r=await fetch(apiUrl,{method:'PUT',headers:{'Authorization':`token ${githubToken}`,'Accept':'application/vnd.github.v3+json'},body:JSON.stringify(b)});
-                if(r.ok){
-                    const d=await r.json();
-                    showLoader('Değişiklikler kaydedildi. Senkronizasyon bekleniyor...');
-                    await confirmDataIsSynced(d.content.sha);
-                } else{
-                    throw new Error(`GitHub API Hatası: ${(await r.json()).message}`);
-                }
-            } catch(e){
-                alert(`Değişiklikler kaydedilirken bir hata oluştu: ${e.message}`);
-            } finally{
-                renderKlasorler();
-                renderEvraklar(aramaInput.value);
-                hideLoader();
-            }
+                if(r.ok){ const d=await r.json(); showLoader('Değişiklikler kaydedildi. Senkronizasyon bekleniyor...'); await confirmDataIsSynced(d.content.sha); } 
+                else{ throw new Error(`GitHub API Hatası: ${(await r.json()).message}`); }
+            } catch(e){ alert(`Değişiklikler kaydedilirken bir hata oluştu: ${e.message}`); } 
+            finally{ renderKlasorler(); renderEvraklar(aramaInput.value); hideLoader(); }
         };
         
-        pdfDosyaInput.addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;try{const t=await pdfMetniniCikar(f);const s=t.match(/Sayı\s*:\s*(.*)/i);if(s)evrakSayisiInput.value=s[1].trim();const k=t.match(/Konu\s*:\s*(.*)/i);if(k)konuInput.value=k[1].trim();const a=t.match(/(\d{2})\.(\d{2})\.(\d{4})/g);if(a){const d=[...new Set(a)].map(s=>{const[d,m,y]=s.split('.');return new Date(y,m-1,d)}).sort((a,b)=>b-a);if(d.length>0)gelisTarihiInput.value=d[0].toISOString().split('T')[0]}const i=t.match(/İlgi\s*:([\s\S]*?)(?=Konu\s*:|\n\n[A-ZÇĞİÖŞÜ])/i);let l=null;if(i&&i[1]){const g=i[1].match(/(\d{2})\.(\d{2})\.(\d{4})/g);if(g){g.forEach(s=>{const[d,m,y]=s.split('.');const c=new Date(y,m-1,d);if(!l||c>l)l=c})}}if(l)sonCevapTarihiInput.value=l.toISOString().split('T')[0];seciliDosyaBase64=await dosyayiBase64eCevir(f)}catch(r){alert("PDF dosyası okunurken bir hata oluştu.")}});evrakFormu.addEventListener('submit',async e=>{e.preventDefault();const k=klasorInput.value.trim();if(editingEvrakId){const v=evraklar.find(i=>i.id===editingEvrakId);if(v)Object.assign(v,{konu:konuInput.value,klasor:k,gelisTarihi:gelisTarihiInput.value,evrakSayisi:evrakSayisiInput.value,sonCevapTarihi:sonCevapTarihiInput.value,durum:durumInput.value,notlar:notlarInput.value})}else{if(!seciliDosyaBase64){alert('Lütfen bir PDF dosyası seçin veya mobil tarayıcıyı kullanın.');return}evraklar.push({id:Date.now(),konu:konuInput.value,klasor:k,gelisTarihi:gelisTarihiInput.value,evrakSayisi:evrakSayisiInput.value,sonCevapTarihi:sonCevapTarihiInput.value,durum:durumInput.value,notlar:notlarInput.value,dosyaBase64:seciliDosyaBase64})}await saveEvraklarToGithub();formuTemizle()});iptalBtn.addEventListener('click',formuTemizle);aramaInput.addEventListener('input',e=>renderEvraklar(e.target.value));klasorListesi.addEventListener('click',e=>{if(e.target.classList.contains('klasor-item')){seciliKlasor=e.target.dataset.klasor;renderKlasorler();renderEvraklar(aramaInput.value)}});evrakListesiBody.addEventListener('click',async e=>{e.preventDefault();const t=e.target.closest('a');if(!t)return;const i=parseInt(t.dataset.id);const v=evraklar.find(d=>d.id===i);if(!v)return;if(t.classList.contains('view-pdf'))showModal(v);else if(t.classList.contains('view-note'))showNoteModal(v);else if(t.classList.contains('delete-evrak')){const c=confirm('Bu evrakı silmek istediğinizden emin misiniz?');if(c){evraklar=evraklar.filter(d=>d.id!==i);await saveEvraklarToGithub()}}else if(t.classList.contains('edit-evrak')){editingEvrakId=v.id;konuInput.value=v.konu;klasorInput.value=v.klasor||'';gelisTarihiInput.value=v.gelisTarihi;evrakSayisiInput.value=v.evrakSayisi;sonCevapTarihiInput.value=v.sonCevapTarihi;durumInput.value=v.durum;notlarInput.value=v.notlar;formBasligi.textContent='Evrakı Düzenle';kaydetBtn.textContent='Değişiklikleri Kaydet';iptalBtn.classList.remove('hidden');pdfInputContainer.parentElement.parentElement.classList.add('hidden');pdfDosyaInput.required=false;window.scrollTo(0,0)}});closeModalBtn.addEventListener('click',hideModal);modalBackdrop.addEventListener('click',hideModal);closeNoteModalBtn.addEventListener('click',hideNoteModal);noteModalBackdrop.addEventListener('click',hideNoteModal);loadEvraklarFromGithub();
+        pdfDosyaInput.addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;try{const t=await pdfMetniniCikar(f);const s=t.match(/Sayı\s*:\s*(.*)/i);if(s)evrakSayisiInput.value=s[1].trim();const k=t.match(/Konu\s*:\s*(.*)/i);if(k)konuInput.value=k[1].trim();const a=t.match(/(\d{2})\.(\d{2})\.(\d{4})/g);if(a){const d=[...new Set(a)].map(s=>{const[d,m,y]=s.split('.');return new Date(y,m-1,d)}).sort((a,b)=>b-a);if(d.length>0)gelisTarihiInput.value=d[0].toISOString().split('T')[0]}const i=t.match(/İlgi\s*:([\s\S]*?)(?=Konu\s*:|\n\n[A-ZÇĞİÖŞÜ])/i);let l=null;if(i&&i[1]){const g=i[1].match(/(\d{2})\.(\d{2})\.(\d{4})/g);if(g){g.forEach(s=>{const[d,m,y]=s.split('.');const c=new Date(y,m-1,d);if(!l||c>l)l=c})}}if(l)sonCevapTarihiInput.value=l.toISOString().split('T')[0];seciliDosyaBase64=await dosyayiBase64eCevir(f)}catch(r){alert("PDF dosyası okunurken bir hata oluştu.")}});
+        
+        evrakFormu.addEventListener('submit',async (e) => {
+            e.preventDefault();
+            const klasor = klasorInput.value.trim();
+            if (editingEvrakId) {
+                const evrak = evraklar.find(i => i.id === editingEvrakId);
+                if (evrak) {
+                    evrak.konu = konuInput.value;
+                    evrak.klasor = klasor;
+                    evrak.gelisTarihi = gelisTarihiInput.value;
+                    evrak.evrakSayisi = evrakSayisiInput.value;
+                    evrak.sonCevapTarihi = sonCevapTarihiInput.value;
+                    evrak.durum = durumInput.value;
+                    evrak.notlar = notlarInput.value;
+                    evrak.uyariTarihi = uyariTarihiInput.value; // Düzeltme
+                }
+            } else {
+                if (!seciliDosyaBase64) { alert('Lütfen bir PDF dosyası seçin veya mobil tarayıcıyı kullanın.'); return; }
+                const yeniEvrak = {
+                    id: Date.now(),
+                    konu: konuInput.value,
+                    klasor: klasor,
+                    gelisTarihi: gelisTarihiInput.value,
+                    evrakSayisi: evrakSayisiInput.value,
+                    sonCevapTarihi: sonCevapTarihiInput.value,
+                    durum: durumInput.value,
+                    notlar: notlarInput.value,
+                    uyariTarihi: uyariTarihiInput.value, // Düzeltme
+                    dosyaBase64: seciliDosyaBase64
+                };
+                evraklar.push(yeniEvrak);
+            }
+            await saveEvraklarToGithub();
+            formuTemizle();
+        });
+
+        iptalBtn.addEventListener('click', formuTemizle);
+        aramaInput.addEventListener('input', e => renderEvraklar(e.target.value));
+        klasorListesi.addEventListener('click', e => { if (e.target.classList.contains('klasor-item')) { seciliKlasor = e.target.dataset.klasor; renderKlasorler(); renderEvraklar(aramaInput.value); } });
+        
+        evrakListesiBody.addEventListener('click', async e => {
+            e.preventDefault();
+            const target = e.target.closest('a');
+            if (!target) return;
+            const evrakId = parseInt(target.dataset.id);
+            const evrak = evraklar.find(d => d.id === evrakId);
+            if (!evrak) return;
+
+            if (target.classList.contains('view-pdf')) { showModal(evrak); }
+            else if (target.classList.contains('view-note')) { showNoteModal(evrak); }
+            else if (target.classList.contains('delete-evrak')) {
+                if (confirm('Bu evrakı silmek istediğinizden emin misiniz?')) {
+                    evraklar = evraklar.filter(d => d.id !== evrakId);
+                    await saveEvraklarToGithub();
+                }
+            } else if (target.classList.contains('edit-evrak')) {
+                editingEvrakId = evrak.id;
+                konuInput.value = evrak.konu;
+                klasorInput.value = evrak.klasor || '';
+                gelisTarihiInput.value = evrak.gelisTarihi;
+                evrakSayisiInput.value = evrak.evrakSayisi;
+                sonCevapTarihiInput.value = evrak.sonCevapTarihi;
+                durumInput.value = evrak.durum;
+                notlarInput.value = evrak.notlar;
+                uyariTarihiInput.value = evrak.uyariTarihi || ''; // Düzeltme
+                formBasligi.textContent = 'Evrakı Düzenle';
+                kaydetBtn.textContent = 'Değişiklikleri Kaydet';
+                iptalBtn.classList.remove('hidden');
+                pdfInputContainer.parentElement.parentElement.classList.add('hidden');
+                pdfDosyaInput.required = false;
+                window.scrollTo(0, 0);
+            }
+        });
+
+        closeModalBtn.addEventListener('click', hideModal);
+        modalBackdrop.addEventListener('click', hideModal);
+        closeNoteModalBtn.addEventListener('click', hideNoteModal);
+        noteModalBackdrop.addEventListener('click', hideNoteModal);
+        
+        loadEvraklarFromGithub();
     });
     </script>
 </body>
