@@ -239,29 +239,49 @@
                     hizliNotListesi.appendChild(div);
                 });
             };
+            
+            function getPlatformConfig() {
+                return new Promise((resolve, reject) => {
+                    let attempts = 0;
+                    const maxAttempts = 5;
+                    const interval = 300; 
+
+                    const check = () => {
+                        if (typeof __firebase_config !== 'undefined' && __firebase_config !== '{}') {
+                            const config = JSON.parse(__firebase_config);
+                            if (config.apiKey) {
+                                resolve({
+                                    appId: typeof __app_id !== 'undefined' ? __app_id : 'default-app-id',
+                                    firebaseConfig: config,
+                                    initialAuthToken: typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null
+                                });
+                                return;
+                            }
+                        }
+                        
+                        attempts++;
+                        if (attempts < maxAttempts) {
+                            setTimeout(check, interval);
+                        } else {
+                            reject(new Error("Firebase yapılandırma bilgileri platform tarafından sağlanamadı. Bu bir platform bağlantı sorunudur. Lütfen sayfayı birkaç saniye sonra yenileyin."));
+                        }
+                    };
+                    check();
+                });
+            }
 
             async function initFirebase() {
                 showLoader('Veritabanına bağlanılıyor...');
                 try {
-                    if (typeof __firebase_config === 'undefined' || __firebase_config === '{}') {
-                        throw new Error("Firebase yapılandırma bilgileri platform tarafından sağlanamadı. Lütfen sayfayı yenileyin veya bir yetkiliyle görüşün.");
-                    }
-
-                    appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-                    const firebaseConfig = JSON.parse(__firebase_config);
+                    const platformData = await getPlatformConfig();
                     
-                    if (!firebaseConfig.apiKey) {
-                        throw new Error("Geçersiz Firebase yapılandırması: API anahtarı eksik.");
-                    }
-
-                    const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-
-                    const app = initializeApp(firebaseConfig);
+                    appId = platformData.appId;
+                    const app = initializeApp(platformData.firebaseConfig);
                     auth = getAuth(app);
                     db = getFirestore(app);
 
-                    if (initialAuthToken) {
-                        await signInWithCustomToken(auth, initialAuthToken);
+                    if (platformData.initialAuthToken) {
+                        await signInWithCustomToken(auth, platformData.initialAuthToken);
                     } else {
                         await signInAnonymously(auth);
                     }
