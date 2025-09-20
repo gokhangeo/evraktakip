@@ -86,6 +86,7 @@
                             <option value="Bekliyor">Bekliyor</option>
                             <option value="İşlemde">İşlemde</option>
                             <option value="Cevaplandı">Cevaplandı</option>
+                            <option value="İşleme Gerek Yok">İşleme Gerek Yok</option>
                         </select>
                     </div>
                     <div>
@@ -453,7 +454,134 @@
         });
         
         // --- Mevcut Fonksiyonlar (Güvenlik Güncellemesi ile) ---
-        const showLoader=(m)=>{loader.textContent=m;loader.style.display='block'};const hideLoader=()=>{loader.style.display='none'};const formatDate=(d)=>{if(!d)return'';const[y,m,a]=d.split('-');return`${a}.${m}.${y}`};const utf8_to_b64=(s)=>btoa(unescape(encodeURIComponent(s)));const b64_to_utf8=(s)=>decodeURIComponent(escape(atob(s)));const formuTemizle=()=>{evrakFormu.reset();seciliDosyaBase64=null;editingEvrakId=null;formBasligi.textContent='Yeni Evrak Ekle';kaydetBtn.textContent='Evrakı Kaydet';iptalBtn.classList.add('hidden');pdfInputContainer.parentElement.parentElement.classList.remove('hidden');pdfDosyaInput.required=true};const dosyayiBase64eCevir=(f)=>new Promise((r,j)=>{const a=new FileReader();a.readAsDataURL(f);a.onload=()=>r(a.result);a.onerror=e=>j(e)});const pdfMetniniCikar=(f)=>new Promise((r,j)=>{const a=new FileReader();a.readAsArrayBuffer(f);a.onload=async()=>{const t=new Uint8Array(a.result);try{const p=await pdfjsLib.getDocument(t).promise;let s='';for(let i=1;i<=p.numPages;i++){const g=await p.getPage(i);const c=await g.getTextContent();s+=c.items.map(m=>m.str).join('\n')}r(s)}catch(e){j(e)}};a.onerror=j});const showModal=(e)=>{modalTitle.textContent=e.konu;pdfFrame.src=e.dosyaBase64;modal.style.display='block';modalBackdrop.style.display='block'};const hideModal=()=>{modal.style.display='none';modalBackdrop.style.display='none';pdfFrame.src=''};const showNoteModal=(e)=>{noteModalTitle.textContent=`"${e.konu}" Notu`;noteContentView.textContent=e.notlar;noteModal.style.display='block';noteModalBackdrop.style.display='block'};const hideNoteModal=()=>{noteModal.style.display='none';noteModalBackdrop.style.display='none';noteContentView.textContent=''};const renderKlasorler=()=>{const k=[...new Set(evraklar.map(e=>e.klasor).filter(Boolean))];klasorListesi.innerHTML='';const c=(n,v)=>{const b=document.createElement('button');b.textContent=n;b.dataset.klasor=v;b.className=`klasor-item px-3 py-1 text-sm font-medium rounded-full cursor-pointer transition-colors duration-200 ${seciliKlasor===v?'active':'bg-gray-200 text-gray-700 hover:bg-gray-300'}`;return b};klasorListesi.appendChild(c('Tüm Evraklar','all'));k.sort().forEach(s=>klasorListesi.appendChild(c(s,s)))};const renderEvraklar=(f='')=>{evrakListesiBody.innerHTML='';let g=evraklar;if(seciliKlasor!=='all'){g=g.filter(e=>e.klasor===seciliKlasor)}if(f){g=g.filter(e=>{const t=f.toLowerCase();const k=e.konu.toLowerCase().includes(t);const s=e.evrakSayisi&&e.evrakSayisi.toLowerCase().includes(t);return k||s})}if(g.length===0){evrakListesiBody.innerHTML=`<tr><td colspan="6" class="text-center py-4 text-gray-500">Bu kritere uygun evrak bulunamadı.</td></tr>`;return}g.forEach(e=>{const r=document.createElement('tr');const d={'Bekliyor':'bg-blue-100 text-blue-800','İşlemde':'bg-yellow-100 text-yellow-800','Cevaplandı':'bg-green-100 text-green-800'};let n='';if(e.notlar&&e.notlar.trim()!==''){n=`<a href="#" class="text-yellow-500 hover:text-yellow-700 view-note" data-id="${e.id}" title="Notu Görüntüle"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline-block" viewBox="0 0 20 20" fill="currentColor"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" /><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd" /></svg></a>`}r.innerHTML=`<td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 flex items-center">${n}<span class="${n?'ml-2':''}">${e.konu}</span></td><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${e.evrakSayisi}</td><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatDate(e.gelisTarihi)}</td><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatDate(e.sonCevapTarihi)}</td><td class="px-6 py-4 whitespace-nowrap"><span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${d[e.durum]||'bg-gray-100 text-gray-800'}">${e.durum}</span></td><td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"><a href="#" class="text-blue-600 hover:text-blue-900 view-pdf" data-id="${e.id}">Görüntüle</a><a href="#" class="text-green-600 hover:text-green-900 ml-4 edit-evrak" data-id="${e.id}">Düzenle</a><a href="#" class="text-red-600 hover:text-red-900 ml-4 delete-evrak" data-id="${e.id}">Sil</a></td>`;evrakListesiBody.appendChild(r)})};
+        const showLoader = (message) => {
+            loader.textContent = message;
+            loader.style.display = 'block';
+        };
+        const hideLoader = () => {
+            loader.style.display = 'none';
+        };
+        const formatDate = (dateString) => {
+            if (!dateString) return '';
+            const [year, month, day] = dateString.split('-');
+            return `${day}.${month}.${year}`;
+        };
+        const utf8_to_b64 = (str) => {
+            return btoa(unescape(encodeURIComponent(str)));
+        };
+        const b64_to_utf8 = (str) => {
+            return decodeURIComponent(escape(atob(str)));
+        };
+        const formuTemizle = () => {
+            evrakFormu.reset();
+            seciliDosyaBase64 = null;
+            editingEvrakId = null;
+            formBasligi.textContent = 'Yeni Evrak Ekle';
+            kaydetBtn.textContent = 'Evrakı Kaydet';
+            iptalBtn.classList.add('hidden');
+            pdfInputContainer.parentElement.parentElement.classList.remove('hidden');
+            pdfDosyaInput.required = true;
+        };
+        const dosyayiBase64eCevir = (file) => {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = error => reject(error);
+            });
+        };
+        const pdfMetniniCikar = (file) => {
+            return new Promise((resolve, reject) => {
+                const fileReader = new FileReader();
+                fileReader.readAsArrayBuffer(file);
+                fileReader.onload = async () => {
+                    const typedarray = new Uint8Array(fileReader.result);
+                    try {
+                        const pdf = await pdfjsLib.getDocument(typedarray).promise;
+                        let fullText = '';
+                        for (let i = 1; i <= pdf.numPages; i++) {
+                            const page = await pdf.getPage(i);
+                            const textContent = await page.getTextContent();
+                            fullText += textContent.items.map(item => item.str).join('\n');
+                        }
+                        resolve(fullText);
+                    } catch (error) {
+                        reject(error);
+                    }
+                };
+                fileReader.onerror = reject;
+            });
+        };
+        const showModal = (evrak) => {
+            modalTitle.textContent = evrak.konu;
+            pdfFrame.src = evrak.dosyaBase64;
+            modal.style.display = 'block';
+            modalBackdrop.style.display = 'block';
+        };
+        const hideModal = () => {
+            modal.style.display = 'none';
+            modalBackdrop.style.display = 'none';
+            pdfFrame.src = '';
+        };
+        const showNoteModal = (evrak) => {
+            noteModalTitle.textContent = `"${evrak.konu}" Notu`;
+            noteContentView.textContent = evrak.notlar;
+            noteModal.style.display = 'block';
+            noteModalBackdrop.style.display = 'block';
+        };
+        const hideNoteModal = () => {
+            noteModal.style.display = 'none';
+            noteModalBackdrop.style.display = 'none';
+            noteContentView.textContent = '';
+        };
+        const renderKlasorler = () => {
+            const klasorler = [...new Set(evraklar.map(e => e.klasor).filter(Boolean))];
+            klasorListesi.innerHTML = '';
+            const createButton = (name, value) => {
+                const button = document.createElement('button');
+                button.textContent = name;
+                button.dataset.klasor = value;
+                button.className = `klasor-item px-3 py-1 text-sm font-medium rounded-full cursor-pointer transition-colors duration-200 ${seciliKlasor === value ? 'active' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`;
+                return button;
+            };
+            klasorListesi.appendChild(createButton('Tüm Evraklar', 'all'));
+            klasorler.sort().forEach(klasor => klasorListesi.appendChild(createButton(klasor, klasor)));
+        };
+
+        const renderEvraklar = (filter = '') => {
+            evrakListesiBody.innerHTML = '';
+            let filtrelenmisEvraklar = evraklar;
+            if (seciliKlasor !== 'all') {
+                filtrelenmisEvraklar = filtrelenmisEvraklar.filter(e => e.klasor === seciliKlasor);
+            }
+            if (filter) {
+                filtrelenmisEvraklar = filtrelenmisEvraklar.filter(evrak => {
+                    const searchTerm = filter.toLowerCase();
+                    const konuMatch = evrak.konu.toLowerCase().includes(searchTerm);
+                    const sayiMatch = evrak.evrakSayisi && evrak.evrakSayisi.toLowerCase().includes(searchTerm);
+                    return konuMatch || sayiMatch;
+                });
+            }
+            if (filtrelenmisEvraklar.length === 0) {
+                evrakListesiBody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-gray-500">Bu kritere uygun evrak bulunamadı.</td></tr>`;
+                return;
+            }
+            filtrelenmisEvraklar.forEach(evrak => {
+                const tr = document.createElement('tr');
+                const durumRenkleri = {
+                    'Bekliyor': 'bg-blue-100 text-blue-800',
+                    'İşlemde': 'bg-yellow-100 text-yellow-800',
+                    'Cevaplandı': 'bg-green-100 text-green-800',
+                    'İşleme Gerek Yok': 'bg-gray-100 text-gray-800'
+                };
+                let notIkonu = '';
+                if (evrak.notlar && evrak.notlar.trim() !== '') {
+                    notIkonu = `<a href="#" class="text-yellow-500 hover:text-yellow-700 view-note" data-id="${evrak.id}" title="Notu Görüntüle"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline-block" viewBox="0 0 20 20" fill="currentColor"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" /><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd" /></svg></a>`;
+                }
+                tr.innerHTML = `<td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 flex items-center">${notIkonu}<span class="${notIkonu ? 'ml-2' : ''}">${evrak.konu}</span></td><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${evrak.evrakSayisi}</td><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatDate(evrak.gelisTarihi)}</td><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatDate(evrak.sonCevapTarihi)}</td><td class="px-6 py-4 whitespace-nowrap"><span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${durumRenkleri[evrak.durum] || 'bg-gray-100 text-gray-800'}">${evrak.durum}</span></td><td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"><a href="#" class="text-blue-600 hover:text-blue-900 view-pdf" data-id="${evrak.id}">Görüntüle</a><a href="#" class="text-green-600 hover:text-green-900 ml-4 edit-evrak" data-id="${evrak.id}">Düzenle</a><a href="#" class="text-red-600 hover:text-red-900 ml-4 delete-evrak" data-id="${evrak.id}">Sil</a></td>`;
+                evrakListesiBody.appendChild(tr);
+            });
+        };
         
         const loadEvraklarFromGithub=async()=>{
             showLoader('Evraklar GitHub\'dan yükleniyor...');
@@ -523,5 +651,4 @@
     </script>
 </body>
 </html>
-
 
