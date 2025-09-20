@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Evrak Takip Sistemi</title>
+    <title>Evrak & Not Takip Sistemi</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Gerekli Kütüphaneler -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.min.js"></script>
@@ -21,6 +21,8 @@
         .modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 50; }
         #loader { display: none; position: fixed; top: 0; left: 0; width: 100%; padding: 8px; background-color: #3b82f6; color: white; text-align: center; z-index: 1000; font-weight: 500; }
         .klasor-item.active { background-color: #3b82f6; color: white; }
+        .tab-button { cursor: pointer; padding: 10px 20px; border-bottom: 3px solid transparent; }
+        .tab-button.active { border-bottom-color: #3b82f6; color: #3b82f6; font-weight: 600; }
 
         /* Tarayıcı Stilleri */
         #scannerModal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: #000; z-index: 900; display: none; flex-direction: column; justify-content: center; align-items: center; overflow: hidden; }
@@ -42,164 +44,131 @@
     <div id="loader">İşlem yapılıyor, lütfen bekleyin...</div>
 
     <div class="container mx-auto p-4 md:p-8">
-        <header class="mb-8">
-            <h1 class="text-3xl font-bold text-gray-700">Evrak Takip Sistemi</h1>
-            <p class="text-gray-500">Gelen evraklarınızı yönetin ve takip edin.</p>
+        <header class="mb-4">
+            <h1 class="text-3xl font-bold text-gray-700">Evrak & Not Takip Sistemi</h1>
+            <p class="text-gray-500">Gelen evraklarınızı ve notlarınızı yönetin.</p>
         </header>
 
-        <main class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <!-- Sol Taraf -->
-            <div class="lg:col-span-1 bg-white p-6 rounded-lg shadow-md h-fit">
-                <h2 id="formBasligi" class="text-xl font-semibold mb-4 border-b pb-2">Yeni Evrak Ekle</h2>
-                <form id="evrakFormu" class="space-y-4">
-                    <div class="grid grid-cols-2 gap-2">
-                        <div id="pdfInputContainer">
-                            <label for="pdfDosya" class="block text-sm font-medium text-gray-600 mb-1">PDF Dosyası Seç</label>
-                            <input type="file" id="pdfDosya" name="pdfDosya" accept=".pdf" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-600 mb-1">Mobil Cihazdan Tara</label>
-                            <button type="button" id="scanBtn" disabled class="w-full bg-indigo-600 text-white font-bold py-2 px-4 rounded-md hover:bg-indigo-700 disabled:bg-gray-400">Mobil Belge Tara</button>
-                        </div>
-                    </div>
-                    <div>
-                        <label for="klasor" class="block text-sm font-medium text-gray-600">Klasör Adı</label>
-                        <input type="text" id="klasor" name="klasor" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm" placeholder="Örn: İmar Planları">
-                    </div>
-                    <div>
-                        <label for="konu" class="block text-sm font-medium text-gray-600">Konu / Başlık</label>
-                        <input type="text" id="konu" name="konu" class="mt-1 block w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-md shadow-sm">
-                    </div>
-                    <div>
-                        <label for="gelisTarihi" class="block text-sm font-medium text-gray-600">Geliş Tarihi</label>
-                        <input type="date" id="gelisTarihi" name="gelisTarihi" class="mt-1 block w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-md shadow-sm">
-                    </div>
-                    <div>
-                        <label for="evrakSayisi" class="block text-sm font-medium text-gray-600">Evrak Sayısı</label>
-                        <input type="text" id="evrakSayisi" name="evrakSayisi" class="mt-1 block w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-md shadow-sm">
-                    </div>
-                    <div>
-                        <label for="sonCevapTarihi" class="block text-sm font-medium text-gray-600">Son Cevap Tarihi</label>
-                        <input type="date" id="sonCevapTarihi" name="sonCevapTarihi" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm">
-                    </div>
-                    <div>
-                        <label for="durum" class="block text-sm font-medium text-gray-600">Durum</label>
-                        <select id="durum" name="durum" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm">
-                            <option value="Bekliyor">Bekliyor</option>
-                            <option value="İşlemde">İşlemde</option>
-                            <option value="Cevaplandı">Cevaplandı</option>
-                            <option value="İşleme Gerek Yok">İşleme Gerek Yok</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label for="notlar" class="block text-sm font-medium text-gray-600">Notlar</label>
-                        <textarea id="notlar" name="notlar" rows="3" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm"></textarea>
-                    </div>
-                    <div>
-                        <label for="uyariTarihi" class="block text-sm font-medium text-gray-600">Uyarı Tarihi (Hatırlatıcı)</label>
-                        <input type="date" id="uyariTarihi" name="uyariTarihi" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm">
-                    </div>
-                    <div class="flex space-x-2">
-                        <button type="submit" id="kaydetBtn" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-md hover:bg-blue-700">Evrakı Kaydet</button>
-                        <button type="button" id="iptalBtn" class="w-full bg-gray-200 text-gray-700 font-bold py-2 px-4 rounded-md hover:bg-gray-300 hidden">İptal</button>
-                    </div>
-                </form>
-            </div>
+        <!-- Sekme Menüsü -->
+        <div class="mb-8 border-b border-gray-200">
+            <nav class="flex space-x-4" aria-label="Tabs">
+                <button id="tabEvrak" class="tab-button active">Evrak Takip</button>
+                <button id="tabNotlar" class="tab-button">Hızlı Notlar</button>
+            </nav>
+        </div>
 
-            <!-- Sağ Taraf -->
-            <div class="lg:col-span-2 bg-white p-6 rounded-lg shadow-md">
-                <div class="flex justify-between items-center mb-4 border-b pb-2">
-                    <h2 class="text-xl font-semibold">Kayıtlı Evraklar</h2>
-                    <input type="text" id="arama" placeholder="Konu veya evrak sayısına göre ara..." class="px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+        <!-- Evrak Takip Bölümü -->
+        <div id="evrakTabContent">
+            <main class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- Sol Taraf: Evrak Formu -->
+                <div class="lg:col-span-1 bg-white p-6 rounded-lg shadow-md h-fit">
+                    <h2 id="formBasligi" class="text-xl font-semibold mb-4 border-b pb-2">Yeni Evrak Ekle</h2>
+                    <form id="evrakFormu" class="space-y-4">
+                        <div class="grid grid-cols-2 gap-2">
+                            <div id="pdfInputContainer">
+                                <label for="pdfDosya" class="block text-sm font-medium text-gray-600 mb-1">PDF Dosyası Seç</label>
+                                <input type="file" id="pdfDosya" name="pdfDosya" accept=".pdf" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-600 mb-1">Mobil Cihazdan Tara</label>
+                                <button type="button" id="scanBtn" disabled class="w-full bg-indigo-600 text-white font-bold py-2 px-4 rounded-md hover:bg-indigo-700 disabled:bg-gray-400">Mobil Belge Tara</button>
+                            </div>
+                        </div>
+                        <div><label for="klasor" class="block text-sm font-medium text-gray-600">Klasör Adı</label><input type="text" id="klasor" name="klasor" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm" placeholder="Örn: İmar Planları"></div>
+                        <div><label for="konu" class="block text-sm font-medium text-gray-600">Konu / Başlık</label><input type="text" id="konu" name="konu" class="mt-1 block w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-md shadow-sm"></div>
+                        <div><label for="gelisTarihi" class="block text-sm font-medium text-gray-600">Geliş Tarihi</label><input type="date" id="gelisTarihi" name="gelisTarihi" class="mt-1 block w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-md shadow-sm"></div>
+                        <div><label for="evrakSayisi" class="block text-sm font-medium text-gray-600">Evrak Sayısı</label><input type="text" id="evrakSayisi" name="evrakSayisi" class="mt-1 block w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-md shadow-sm"></div>
+                        <div><label for="sonCevapTarihi" class="block text-sm font-medium text-gray-600">Son Cevap Tarihi</label><input type="date" id="sonCevapTarihi" name="sonCevapTarihi" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm"></div>
+                        <div><label for="durum" class="block text-sm font-medium text-gray-600">Durum</label><select id="durum" name="durum" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm"><option value="Bekliyor">Bekliyor</option><option value="İşlemde">İşlemde</option><option value="Cevaplandı">Cevaplandı</option><option value="İşleme Gerek Yok">İşleme Gerek Yok</option></select></div>
+                        <div><label for="notlar" class="block text-sm font-medium text-gray-600">Notlar</label><textarea id="notlar" name="notlar" rows="3" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm"></textarea></div>
+                        <div><label for="uyariTarihi" class="block text-sm font-medium text-gray-600">Uyarı Tarihi (Hatırlatıcı)</label><input type="date" id="uyariTarihi" name="uyariTarihi" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm"></div>
+                        <div class="flex space-x-2"><button type="submit" id="kaydetBtn" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-md hover:bg-blue-700">Evrakı Kaydet</button><button type="button" id="iptalBtn" class="w-full bg-gray-200 text-gray-700 font-bold py-2 px-4 rounded-md hover:bg-gray-300 hidden">İptal</button></div>
+                    </form>
                 </div>
-                <div class="mb-4">
-                    <h3 class="text-lg font-semibold mb-2 text-gray-600">Dosya Klasörleri</h3>
-                    <div id="klasorListesi" class="flex flex-wrap gap-2"></div>
+                <!-- Sağ Taraf: Evrak Listesi -->
+                <div class="lg:col-span-2 bg-white p-6 rounded-lg shadow-md">
+                    <div class="flex justify-between items-center mb-4 border-b pb-2"><h2 class="text-xl font-semibold">Kayıtlı Evraklar</h2><input type="text" id="arama" placeholder="Konu veya evrak sayısına göre ara..." class="px-3 py-2 border border-gray-300 rounded-md shadow-sm"></div>
+                    <div class="mb-4"><h3 class="text-lg font-semibold mb-2 text-gray-600">Dosya Klasörleri</h3><div id="klasorListesi" class="flex flex-wrap gap-2"></div></div>
+                    <div class="overflow-x-auto"><table class="min-w-full divide-y divide-gray-200"><thead class="bg-gray-50"><tr><th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Konu</th><th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Evrak Sayısı</th><th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Geliş Tarihi</th><th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Son Cevap Tarihi</th><th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Durum</th><th scope="col" class="relative px-6 py-3"><span class="sr-only">İşlemler</span></th></tr></thead><tbody id="evrakListesi" class="bg-white divide-y divide-gray-200"></tbody></table></div>
                 </div>
-                <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200">
-                        <thead class="bg-gray-50">
-                            <tr>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Konu</th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Evrak Sayısı</th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Geliş Tarihi</th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Son Cevap Tarihi</th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Durum</th>
-                                <th scope="col" class="relative px-6 py-3"><span class="sr-only">İşlemler</span></th>
-                            </tr>
-                        </thead>
-                        <tbody id="evrakListesi" class="bg-white divide-y divide-gray-200"></tbody>
-                    </table>
+            </main>
+        </div>
+
+        <!-- Hızlı Notlar Bölümü -->
+        <div id="notlarTabContent" class="hidden">
+            <main class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- Sol Taraf: Not Formu -->
+                <div class="lg:col-span-1 bg-white p-6 rounded-lg shadow-md h-fit">
+                    <h2 id="notFormBasligi" class="text-xl font-semibold mb-4 border-b pb-2">Yeni Not Ekle</h2>
+                    <form id="hizliNotFormu" class="space-y-4">
+                        <div><label for="notBaslik" class="block text-sm font-medium text-gray-600">Not Başlığı</label><input type="text" id="notBaslik" name="notBaslik" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm" required></div>
+                        <div><label for="notIcerik" class="block text-sm font-medium text-gray-600">Not İçeriği</label><textarea id="notIcerik" name="notIcerik" rows="5" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm"></textarea></div>
+                        <div><label for="notUyariTarihi" class="block text-sm font-medium text-gray-600">Uyarı Tarihi</label><input type="date" id="notUyariTarihi" name="notUyariTarihi" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm"></div>
+                        <div class="flex space-x-2"><button type="submit" id="notKaydetBtn" class="w-full bg-green-600 text-white font-bold py-2 px-4 rounded-md hover:bg-green-700">Notu Kaydet</button><button type="button" id="notIptalBtn" class="w-full bg-gray-200 text-gray-700 font-bold py-2 px-4 rounded-md hover:bg-gray-300 hidden">İptal</button></div>
+                    </form>
                 </div>
-            </div>
-        </main>
+                <!-- Sağ Taraf: Not Listesi -->
+                <div class="lg:col-span-2 bg-white p-6 rounded-lg shadow-md">
+                     <div class="flex justify-between items-center mb-4 border-b pb-2"><h2 class="text-xl font-semibold">Kayıtlı Notlar</h2><input type="text" id="notArama" placeholder="Notlarda ara..." class="px-3 py-2 border border-gray-300 rounded-md shadow-sm"></div>
+                    <div id="hizliNotListesi" class="space-y-3"></div>
+                </div>
+            </main>
+        </div>
+
     </div>
     
     <!-- Modallar -->
-    <div id="pdfModalBackdrop" class="modal-backdrop"></div>
-    <div id="pdfModal" class="modal bg-white rounded-lg shadow-xl w-11/12 md:w-3/4 lg:w-2/3" style="max-height: 90vh; height: 90vh;">
-        <div class="p-4 border-b flex justify-between items-center"><h3 id="modalTitle" class="text-lg font-semibold">PDF Görüntüleyici</h3><button id="closeModal" class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button></div>
-        <div class="overflow-auto h-full p-2"><iframe id="pdfFrame" class="w-full" style="height: calc(100% - 10px); border: none;"></iframe></div>
-    </div>
-
-    <div id="noteModalBackdrop" class="modal-backdrop"></div>
-    <div id="noteModal" class="modal bg-white rounded-lg shadow-xl w-11/12 md:w-1/2 lg:w-1/3">
-        <div class="p-4 border-b flex justify-between items-center"><h3 id="noteModalTitle" class="text-lg font-semibold">Evrak Notu</h3><button id="closeNoteModal" class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button></div>
-        <div id="noteContentView" class="p-6 whitespace-pre-wrap text-gray-700"></div>
-    </div>
-    
-    <!-- Tarayıcı Modalı -->
-    <div id="scannerModal">
-        <video id="videoFeed" playsinline></video>
-        <canvas id="cropCanvas" class="hidden"></canvas>
-        <canvas id="canvasOutput" class="hidden"></canvas>
-        <div id="magnifier"></div>
-        <div id="scannerControls">
-             <button id="retryScanBtn" class="bg-yellow-500 text-white font-bold py-2 px-4 rounded-md hidden">Tekrar Çek</button>
-             <div id="captureBtn" class="scanner-button"><div class="scanner-inner-button"></div></div>
-             <button id="cropBtn" class="bg-blue-500 text-white font-bold py-2 px-4 rounded-md hidden">Onayla</button>
-             <button id="confirmScanBtn" class="bg-green-500 text-white font-bold py-2 px-4 rounded-md hidden">Kaydet</button>
-        </div>
-         <button id="closeScannerBtn" class="absolute top-5 right-5 text-white text-3xl font-bold">&times;</button>
-    </div>
+    <div id="pdfModalBackdrop" class="modal-backdrop"></div><div id="pdfModal" class="modal bg-white rounded-lg shadow-xl w-11/12 md:w-3/4 lg:w-2/3" style="max-height: 90vh; height: 90vh;"><div class="p-4 border-b flex justify-between items-center"><h3 id="modalTitle" class="text-lg font-semibold">PDF Görüntüleyici</h3><button id="closeModal" class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button></div><div class="overflow-auto h-full p-2"><iframe id="pdfFrame" class="w-full" style="height: calc(100% - 10px); border: none;"></iframe></div></div>
+    <div id="noteModalBackdrop" class="modal-backdrop"></div><div id="noteModal" class="modal bg-white rounded-lg shadow-xl w-11/12 md:w-1/2 lg:w-1/3"><div class="p-4 border-b flex justify-between items-center"><h3 id="noteModalTitle" class="text-lg font-semibold">Evrak Notu</h3><button id="closeNoteModal" class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button></div><div id="noteContentView" class="p-6 whitespace-pre-wrap text-gray-700"></div></div>
+    <div id="scannerModal"><video id="videoFeed" playsinline></video><canvas id="cropCanvas" class="hidden"></canvas><canvas id="canvasOutput" class="hidden"></canvas><div id="magnifier"></div><div id="scannerControls"><button id="retryScanBtn" class="bg-yellow-500 text-white font-bold py-2 px-4 rounded-md hidden">Tekrar Çek</button><div id="captureBtn" class="scanner-button"><div class="scanner-inner-button"></div></div><button id="cropBtn" class="bg-blue-500 text-white font-bold py-2 px-4 rounded-md hidden">Onayla</button><button id="confirmScanBtn" class="bg-green-500 text-white font-bold py-2 px-4 rounded-md hidden">Kaydet</button></div><button id="closeScannerBtn" class="absolute top-5 right-5 text-white text-3xl font-bold">&times;</button></div>
 
     <script>
     let cvIsReady = false;
-    function onOpenCvReady() {
-        cv['onRuntimeInitialized']=()=>{ cvIsReady = true; document.getElementById('scanBtn').disabled = false; };
-    }
+    function onOpenCvReady() { cv['onRuntimeInitialized']=()=>{ cvIsReady = true; document.getElementById('scanBtn').disabled = false; }; }
     
     document.addEventListener('DOMContentLoaded', () => {
         // --- Element Referansları ---
-        const scanBtn = document.getElementById('scanBtn');
-        const scannerModal = document.getElementById('scannerModal');
-        const videoFeed = document.getElementById('videoFeed');
-        const captureBtn = document.getElementById('captureBtn');
-        const retryScanBtn = document.getElementById('retryScanBtn');
-        const cropBtn = document.getElementById('cropBtn');
-        const confirmScanBtn = document.getElementById('confirmScanBtn');
-        const closeScannerBtn = document.getElementById('closeScannerBtn');
-        const cropCanvas = document.getElementById('cropCanvas');
-        const canvasOutput = document.getElementById('canvasOutput');
-        const magnifier = document.getElementById('magnifier');
-        const klasorInput = document.getElementById('klasor');
+        const tabEvrak = document.getElementById('tabEvrak');
+        const tabNotlar = document.getElementById('tabNotlar');
+        const evrakTabContent = document.getElementById('evrakTabContent');
+        const notlarTabContent = document.getElementById('notlarTabContent');
+        
+        // Evrak Formu
         const evrakFormu = document.getElementById('evrakFormu');
         const pdfDosyaInput = document.getElementById('pdfDosya');
         const pdfInputContainer = document.getElementById('pdfInputContainer');
+        const klasorInput = document.getElementById('klasor');
         const konuInput = document.getElementById('konu');
         const gelisTarihiInput = document.getElementById('gelisTarihi');
         const evrakSayisiInput = document.getElementById('evrakSayisi');
         const sonCevapTarihiInput = document.getElementById('sonCevapTarihi');
         const durumInput = document.getElementById('durum');
         const notlarInput = document.getElementById('notlar');
-        const uyariTarihiInput = document.getElementById('uyariTarihi'); // Yeni
-        const evrakListesiBody = document.getElementById('evrakListesi');
-        const klasorListesi = document.getElementById('klasorListesi');
-        const aramaInput = document.getElementById('arama');
-        const loader = document.getElementById('loader');
+        const uyariTarihiInput = document.getElementById('uyariTarihi');
         const kaydetBtn = document.getElementById('kaydetBtn');
         const iptalBtn = document.getElementById('iptalBtn');
         const formBasligi = document.getElementById('formBasligi');
+
+        // Evrak Listesi
+        const evrakListesiBody = document.getElementById('evrakListesi');
+        const klasorListesi = document.getElementById('klasorListesi');
+        const aramaInput = document.getElementById('arama');
+
+        // Hızlı Not Formu
+        const hizliNotFormu = document.getElementById('hizliNotFormu');
+        const notFormBasligi = document.getElementById('notFormBasligi');
+        const notBaslikInput = document.getElementById('notBaslik');
+        const notIcerikInput = document.getElementById('notIcerik');
+        const notUyariTarihiInput = document.getElementById('notUyariTarihi');
+        const notKaydetBtn = document.getElementById('notKaydetBtn');
+        const notIptalBtn = document.getElementById('notIptalBtn');
+
+        // Hızlı Not Listesi
+        const hizliNotListesi = document.getElementById('hizliNotListesi');
+        const notAramaInput = document.getElementById('notArama');
+        
+        // Genel & Modal Elementleri
+        const loader = document.getElementById('loader');
         const modalBackdrop = document.getElementById('pdfModalBackdrop');
         const modal = document.getElementById('pdfModal');
         const closeModalBtn = document.getElementById('closeModal');
@@ -211,6 +180,19 @@
         const noteModalTitle = document.getElementById('noteModalTitle');
         const noteContentView = document.getElementById('noteContentView');
         
+        // Tarayıcı Elementleri
+        const scanBtn = document.getElementById('scanBtn');
+        const scannerModal = document.getElementById('scannerModal');
+        const videoFeed = document.getElementById('videoFeed');
+        const captureBtn = document.getElementById('captureBtn');
+        const retryScanBtn = document.getElementById('retryScanBtn');
+        const cropBtn = document.getElementById('cropBtn');
+        const confirmScanBtn = document.getElementById('confirmScanBtn');
+        const closeScannerBtn = document.getElementById('closeScannerBtn');
+        const cropCanvas = document.getElementById('cropCanvas');
+        const canvasOutput = document.getElementById('canvasOutput');
+        const magnifier = document.getElementById('magnifier');
+        
         // --- GitHub API Ayarları ---
         const p1 = 'ghp_MAuvwYTJDUiqFY5h72CZ'; const p2 = 'eXnMKuxrCJ08sfAl';
         const githubToken = p1 + p2;
@@ -219,438 +201,155 @@
 
         // --- Uygulama Değişkenleri ---
         pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.worker.min.js`;
-        let evraklar = []; let evraklarSha = null; let seciliDosyaBase64 = null; let editingEvrakId = null;
+        let evraklar = [];
+        let hizliNotlar = [];
+        let evraklarSha = null; let seciliDosyaBase64 = null; let editingEvrakId = null; let editingNotId = null;
         let seciliKlasor = 'all'; let stream = null; const { jsPDF } = window.jspdf;
         let cornerPoints = []; let draggingPointIndex = -1; let capturedImage = null;
-        let dataLoadedSuccessfully = false; // Veri koruma kilidi
+        let dataLoadedSuccessfully = false;
 
-        // --- Tarayıcı Fonksiyonları ---
-        const openScanner = async () => {
-            if (!cvIsReady) { alert('Tarayıcı kütüphanesi henüz hazır değil.'); return; }
-            try {
-                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } } });
-                videoFeed.srcObject = stream;
-                videoFeed.style.display = 'block';
-                cropCanvas.style.display = 'none';
-                canvasOutput.style.display = 'none';
-                scannerModal.style.display = 'flex';
-                captureBtn.style.display = 'flex';
-                retryScanBtn.style.display = 'none';
-                cropBtn.style.display = 'none';
-                confirmScanBtn.style.display = 'none';
-                videoFeed.play();
-            } catch (err) { alert("Kameraya erişilemedi. Lütfen izinleri kontrol edin."); }
-        };
-
-        const closeScanner = () => {
-            if (stream) { stream.getTracks().forEach(track => track.stop()); }
-            scannerModal.style.display = 'none';
-        };
-
-        const startCropping = () => {
-            capturedImage = document.createElement('canvas');
-            capturedImage.width = videoFeed.videoWidth;
-            capturedImage.height = videoFeed.videoHeight;
-            capturedImage.getContext('2d').drawImage(videoFeed, 0, 0);
-
-            videoFeed.style.display = 'none';
-            cropCanvas.style.display = 'block';
-            captureBtn.style.display = 'none';
-            retryScanBtn.style.display = 'inline-block';
-            cropBtn.style.display = 'inline-block';
-
-            const margin = 0.15;
-            cornerPoints = [
-                { x: capturedImage.width * margin, y: capturedImage.height * margin },
-                { x: capturedImage.width * (1 - margin), y: capturedImage.height * margin },
-                { x: capturedImage.width * (1 - margin), y: capturedImage.height * (1 - margin) },
-                { x: capturedImage.width * margin, y: capturedImage.height * (1 - margin) },
-            ];
-            
-            cropCanvas.width = scannerModal.clientWidth;
-            cropCanvas.height = scannerModal.clientHeight * 0.85;
-            
-            drawCroppingUI();
-        };
-        
-        const drawCroppingUI = () => {
-            const ctx = cropCanvas.getContext('2d');
-            const canvasWidth = cropCanvas.width;
-            const canvasHeight = cropCanvas.height;
-
-            const imgRatio = capturedImage.width / capturedImage.height;
-            const canvasRatio = canvasWidth / canvasHeight;
-
-            let drawWidth, drawHeight, offsetX, offsetY;
-            if (imgRatio > canvasRatio) {
-                drawWidth = canvasWidth;
-                drawHeight = drawWidth / imgRatio;
-                offsetX = 0;
-                offsetY = (canvasHeight - drawHeight) / 2;
-            } else {
-                drawHeight = canvasHeight;
-                drawWidth = drawHeight * imgRatio;
-                offsetY = 0;
-                offsetX = (canvasWidth - drawWidth) / 2;
-            }
-
-            ctx.clearRect(0, 0, canvasWidth, canvasHeight);
-            ctx.drawImage(capturedImage, offsetX, offsetY, drawWidth, drawHeight);
-
-            ctx.strokeStyle = '#00f';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            
-            const toCanvasPoint = p => ({
-                x: (p.x / capturedImage.width) * drawWidth + offsetX,
-                y: (p.y / capturedImage.height) * drawHeight + offsetY,
-            });
-
-            const canvasPoints = cornerPoints.map(toCanvasPoint);
-            
-            ctx.moveTo(canvasPoints[0].x, canvasPoints[0].y);
-            for (let i = 1; i < canvasPoints.length; i++) {
-                ctx.lineTo(canvasPoints[i].x, canvasPoints[i].y);
-            }
-            ctx.closePath();
-            ctx.stroke();
-
-            ctx.fillStyle = '#00f';
-            canvasPoints.forEach(p => {
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, 10, 0, 2 * Math.PI);
-                ctx.fill();
-            });
-        };
-
-        const getTouchPos = (canvas, evt) => {
-            const rect = canvas.getBoundingClientRect();
-            const touch = evt.touches[0];
-            return { x: touch.clientX - rect.left, y: touch.clientY - rect.top };
-        };
-        
-        const getMousePos = (canvas, evt) => {
-             const rect = canvas.getBoundingClientRect();
-             return { x: evt.clientX - rect.left, y: evt.clientY - rect.top };
-        };
-        
-        const handleDragStart = (pos) => {
-            const canvasPoints = cornerPoints.map(p => {
-                const imgRatio = capturedImage.width / capturedImage.height;
-                const canvasRatio = cropCanvas.width / cropCanvas.height;
-                let drawWidth, drawHeight, offsetX, offsetY;
-                if (imgRatio > canvasRatio) {
-                    drawWidth = cropCanvas.width; drawHeight = drawWidth / imgRatio; offsetX = 0; offsetY = (cropCanvas.height - drawHeight) / 2;
-                } else {
-                    drawHeight = cropCanvas.height; drawWidth = drawHeight * imgRatio; offsetY = 0; offsetX = (cropCanvas.width - drawWidth) / 2;
-                }
-                return { x: (p.x / capturedImage.width) * drawWidth + offsetX, y: (p.y / capturedImage.height) * drawHeight + offsetY };
-            });
-
-            for (let i = 0; i < canvasPoints.length; i++) {
-                const dist = Math.hypot(pos.x - canvasPoints[i].x, pos.y - canvasPoints[i].y);
-                if (dist < 20) { draggingPointIndex = i; cropCanvas.style.cursor = 'grabbing'; break; }
-            }
-        };
-
-        const handleDragMove = (pos) => {
-            if (draggingPointIndex === -1) return;
-
-            const imgRatio = capturedImage.width / capturedImage.height;
-            const canvasRatio = cropCanvas.width / cropCanvas.height;
-            let drawWidth, drawHeight, offsetX, offsetY;
-            if (imgRatio > canvasRatio) {
-                drawWidth = cropCanvas.width; drawHeight = drawWidth / imgRatio; offsetX = 0; offsetY = (cropCanvas.height - drawHeight) / 2;
-            } else {
-                drawHeight = cropCanvas.height; drawWidth = drawHeight * imgRatio; offsetY = 0; offsetX = (cropCanvas.width - drawWidth) / 2;
-            }
-
-            cornerPoints[draggingPointIndex] = {
-                x: ((pos.x - offsetX) / drawWidth) * capturedImage.width,
-                y: ((pos.y - offsetY) / drawHeight) * capturedImage.height,
-            };
-
-            const magnifySize = 120;
-            magnifier.style.display = 'block';
-            magnifier.style.left = `${pos.x - magnifySize/2}px`;
-            magnifier.style.top = `${pos.y - magnifySize/2}px`;
-            magnifier.style.background = `url(${capturedImage.toDataURL()})`;
-            const bgPosX = -(cornerPoints[draggingPointIndex].x * 2 - magnifySize/2);
-            const bgPosY = -(cornerPoints[draggingPointIndex].y * 2 - magnifySize/2);
-            magnifier.style.backgroundPosition = `${bgPosX}px ${bgPosY}px`;
-            magnifier.style.backgroundSize = `${capturedImage.width * 2}px ${capturedImage.height * 2}px`;
-
-            drawCroppingUI();
-        };
-
-        const handleDragEnd = () => {
-            draggingPointIndex = -1;
-            cropCanvas.style.cursor = 'grab';
-            magnifier.style.display = 'none';
-        };
-
-        cropCanvas.addEventListener('mousedown', (e) => handleDragStart(getMousePos(cropCanvas, e)));
-        cropCanvas.addEventListener('mousemove', (e) => handleDragMove(getMousePos(cropCanvas, e)));
-        cropCanvas.addEventListener('mouseup', handleDragEnd);
-        cropCanvas.addEventListener('mouseleave', handleDragEnd);
-        cropCanvas.addEventListener('touchstart', (e) => { e.preventDefault(); handleDragStart(getTouchPos(cropCanvas, e)); });
-        cropCanvas.addEventListener('touchmove', (e) => { e.preventDefault(); handleDragMove(getTouchPos(cropCanvas, e)); });
-        cropCanvas.addEventListener('touchend', handleDragEnd);
-        
-        const applyCrop = () => {
-            let src = cv.imread(capturedImage);
-            
-            const sortedPoints = [...cornerPoints].sort((a,b) => a.y - b.y);
-            const topPoints = sortedPoints.slice(0, 2).sort((a,b) => a.x - b.x);
-            const bottomPoints = sortedPoints.slice(2, 4).sort((a,b) => a.x - b.x);
-            const [tl, tr, bl, br] = [topPoints[0], topPoints[1], bottomPoints[0], bottomPoints[1]];
-            
-            const widthA = Math.hypot(br.x - bl.x, br.y - bl.y);
-            const widthB = Math.hypot(tr.x - tl.x, tr.y - tl.y);
-            const maxWidth = Math.max(widthA, widthB);
-            const heightA = Math.hypot(tr.x - br.x, tr.y - br.y);
-            const heightB = Math.hypot(tl.x - bl.x, tl.y - bl.y);
-            const maxHeight = Math.max(heightA, heightB);
-
-            let dst = new cv.Mat();
-            let dsize = new cv.Size(maxWidth, maxHeight);
-            let srcTri = cv.matFromArray(4, 1, cv.CV_32FC2, [tl.x, tl.y, tr.x, tr.y, bl.x, bl.y, br.x, br.y]);
-            let dstTri = cv.matFromArray(4, 1, cv.CV_32FC2, [0, 0, maxWidth, 0, 0, maxHeight, maxWidth, maxHeight]);
-            let M = cv.getPerspectiveTransform(srcTri, dstTri);
-            cv.warpPerspective(src, dst, M, dsize, cv.INTER_LINEAR, cv.BORDER_CONSTANT, new cv.Scalar());
-            
-            cv.cvtColor(dst, dst, cv.COLOR_RGBA2GRAY);
-            cv.adaptiveThreshold(dst, dst, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, 11, 12);
-
-            cv.imshow(canvasOutput, dst);
-            
-            cropCanvas.style.display = 'none';
-            canvasOutput.style.display = 'block';
-            cropBtn.style.display = 'none';
-            confirmScanBtn.style.display = 'inline-block';
-            
-            src.delete(); dst.delete(); srcTri.delete(); dstTri.delete(); M.delete();
-        };
-
-        scanBtn.addEventListener('click', openScanner);
-        closeScannerBtn.addEventListener('click', closeScanner);
-        captureBtn.addEventListener('click', startCropping);
-        retryScanBtn.addEventListener('click', () => {
-             videoFeed.style.display = 'block';
-             cropCanvas.style.display = 'none';
-             canvasOutput.style.display = 'none';
-             captureBtn.style.display = 'flex';
-             retryScanBtn.style.display = 'none';
-             cropBtn.style.display = 'none';
-             confirmScanBtn.style.display = 'none';
-        });
-        cropBtn.addEventListener('click', applyCrop);
-        confirmScanBtn.addEventListener('click', () => {
-            const imageDataUrl = canvasOutput.toDataURL('image/jpeg', 0.9);
-            const doc = new jsPDF();
-            const imgProps= doc.getImageProperties(imageDataUrl);
-            const pdfWidth = doc.internal.pageSize.getWidth();
-            const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-            doc.addImage(imageDataUrl, 'JPEG', 0, 0, pdfWidth, pdfHeight);
-            seciliDosyaBase64 = doc.output('datauristring');
-            klasorInput.value = 'Mobil';
-            konuInput.value = 'Taranan Belge - ' + new Date().toLocaleString('tr-TR');
-            gelisTarihiInput.value = new Date().toISOString().split('T')[0];
-            closeScanner();
-            alert('Belge tarandı ve forma eklendi. Kaydet butonuna basarak işlemi tamamlayın.');
-        });
-        
-        // --- Mevcut Fonksiyonlar (Düzeltmelerle) ---
+        // --- Yardımcı Fonksiyonlar ---
         const showLoader = (message) => { loader.textContent = message; loader.style.display = 'block'; };
         const hideLoader = () => { loader.style.display = 'none'; };
         const formatDate = (dateString) => { if (!dateString) return ''; const [year, month, day] = dateString.split('-'); return `${day}.${month}.${year}`; };
         const utf8_to_b64 = (str) => btoa(unescape(encodeURIComponent(str)));
         const b64_to_utf8 = (str) => decodeURIComponent(escape(atob(str)));
-        const formuTemizle = () => {
-            evrakFormu.reset();
-            seciliDosyaBase64 = null;
-            editingEvrakId = null;
-            formBasligi.textContent = 'Yeni Evrak Ekle';
-            kaydetBtn.textContent = 'Evrakı Kaydet';
-            iptalBtn.classList.add('hidden');
-            pdfInputContainer.parentElement.parentElement.classList.remove('hidden');
-            pdfDosyaInput.required = true;
-        };
+
+        // --- Tarayıcı Fonksiyonları ---
+        const openScanner=async()=>{if(!cvIsReady){alert('Tarayıcı kütüphanesi henüz hazır değil.');return}try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1920},height:{ideal:1080}}});videoFeed.srcObject=stream;videoFeed.style.display='block';cropCanvas.style.display='none';canvasOutput.style.display='none';scannerModal.style.display='flex';captureBtn.style.display='flex';retryScanBtn.style.display='none';cropBtn.style.display='none';confirmScanBtn.style.display='none';videoFeed.play()}catch(err){alert("Kameraya erişilemedi. Lütfen izinleri kontrol edin.")}};const closeScanner=()=>{if(stream){stream.getTracks().forEach(track=>track.stop())}scannerModal.style.display='none'};const startCropping=()=>{capturedImage=document.createElement('canvas');capturedImage.width=videoFeed.videoWidth;capturedImage.height=videoFeed.videoHeight;capturedImage.getContext('2d').drawImage(videoFeed,0,0);videoFeed.style.display='none';cropCanvas.style.display='block';captureBtn.style.display='none';retryScanBtn.style.display='inline-block';cropBtn.style.display='inline-block';const margin=0.15;cornerPoints=[{x:capturedImage.width*margin,y:capturedImage.height*margin},{x:capturedImage.width*(1-margin),y:capturedImage.height*margin},{x:capturedImage.width*(1-margin),y:capturedImage.height*(1-margin)},{x:capturedImage.width*margin,y:capturedImage.height*(1-margin)},];cropCanvas.width=scannerModal.clientWidth;cropCanvas.height=scannerModal.clientHeight*0.85;drawCroppingUI()};const drawCroppingUI=()=>{const ctx=cropCanvas.getContext('2d');const canvasWidth=cropCanvas.width;const canvasHeight=cropCanvas.height;const imgRatio=capturedImage.width/capturedImage.height;const canvasRatio=canvasWidth/canvasHeight;let drawWidth,drawHeight,offsetX,offsetY;if(imgRatio>canvasRatio){drawWidth=canvasWidth;drawHeight=drawWidth/imgRatio;offsetX=0;offsetY=(canvasHeight-drawHeight)/2}else{drawHeight=canvasHeight;drawWidth=drawHeight*imgRatio;offsetY=0;offsetX=(canvasWidth-drawWidth)/2}ctx.clearRect(0,0,canvasWidth,canvasHeight);ctx.drawImage(capturedImage,offsetX,offsetY,drawWidth,drawHeight);ctx.strokeStyle='#00f';ctx.lineWidth=2;ctx.beginPath();const toCanvasPoint=p=>({x:(p.x/capturedImage.width)*drawWidth+offsetX,y:(p.y/capturedImage.height)*drawHeight+offsetY});const canvasPoints=cornerPoints.map(toCanvasPoint);ctx.moveTo(canvasPoints[0].x,canvasPoints[0].y);for(let i=1;i<canvasPoints.length;i++){ctx.lineTo(canvasPoints[i].x,canvasPoints[i].y)}ctx.closePath();ctx.stroke();ctx.fillStyle='#00f';canvasPoints.forEach(p=>{ctx.beginPath();ctx.arc(p.x,p.y,10,0,2*Math.PI);ctx.fill()})};const getTouchPos=(canvas,evt)=>{const rect=canvas.getBoundingClientRect();const touch=evt.touches[0];return{x:touch.clientX-rect.left,y:touch.clientY-rect.top}};const getMousePos=(canvas,evt)=>{const rect=canvas.getBoundingClientRect();return{x:evt.clientX-rect.left,y:evt.clientY-rect.top}};const handleDragStart=(pos)=>{const canvasPoints=cornerPoints.map(p=>{const imgRatio=capturedImage.width/capturedImage.height;const canvasRatio=cropCanvas.width/cropCanvas.height;let drawWidth,drawHeight,offsetX,offsetY;if(imgRatio>canvasRatio){drawWidth=cropCanvas.width;drawHeight=drawWidth/imgRatio;offsetX=0;offsetY=(cropCanvas.height-drawHeight)/2}else{drawHeight=cropCanvas.height;drawWidth=drawHeight*imgRatio;offsetY=0;offsetX=(cropCanvas.width-drawWidth)/2}return{x:(p.x/capturedImage.width)*drawWidth+offsetX,y:(p.y/capturedImage.height)*drawHeight+offsetY}});for(let i=0;i<canvasPoints.length;i++){const dist=Math.hypot(pos.x-canvasPoints[i].x,pos.y-canvasPoints[i].y);if(dist<20){draggingPointIndex=i;cropCanvas.style.cursor='grabbing';break}}};const handleDragMove=(pos)=>{if(draggingPointIndex===-1)return;const imgRatio=capturedImage.width/capturedImage.height;const canvasRatio=cropCanvas.width/cropCanvas.height;let drawWidth,drawHeight,offsetX,offsetY;if(imgRatio>canvasRatio){drawWidth=cropCanvas.width;drawHeight=drawWidth/imgRatio;offsetX=0;offsetY=(cropCanvas.height-drawHeight)/2}else{drawHeight=cropCanvas.height;drawWidth=drawHeight*imgRatio;offsetY=0;offsetX=(cropCanvas.width-drawWidth)/2}cornerPoints[draggingPointIndex]={x:((pos.x-offsetX)/drawWidth)*capturedImage.width,y:((pos.y-offsetY)/drawHeight)*capturedImage.height,};const magnifySize=120;magnifier.style.display='block';magnifier.style.left=`${pos.x-magnifySize/2}px`;magnifier.style.top=`${pos.y-magnifySize/2}px`;magnifier.style.background=`url(${capturedImage.toDataURL()})`;const bgPosX=-(cornerPoints[draggingPointIndex].x*2-magnifySize/2);const bgPosY=-(cornerPoints[draggingPointIndex].y*2-magnifySize/2);magnifier.style.backgroundPosition=`${bgPosX}px ${bgPosY}px`;magnifier.style.backgroundSize=`${capturedImage.width*2}px ${capturedImage.height*2}px`;drawCroppingUI()};const handleDragEnd=()=>{draggingPointIndex=-1;cropCanvas.style.cursor='grab';magnifier.style.display='none'};cropCanvas.addEventListener('mousedown',(e)=>handleDragStart(getMousePos(cropCanvas,e)));cropCanvas.addEventListener('mousemove',(e)=>handleDragMove(getMousePos(cropCanvas,e)));cropCanvas.addEventListener('mouseup',handleDragEnd);cropCanvas.addEventListener('mouseleave',handleDragEnd);cropCanvas.addEventListener('touchstart',(e)=>{e.preventDefault();handleDragStart(getTouchPos(cropCanvas,e))});cropCanvas.addEventListener('touchmove',(e)=>{e.preventDefault();handleDragMove(getTouchPos(cropCanvas,e))});cropCanvas.addEventListener('touchend',handleDragEnd);const applyCrop=()=>{let src=cv.imread(capturedImage);const sortedPoints=[...cornerPoints].sort((a,b)=>a.y-b.y);const topPoints=sortedPoints.slice(0,2).sort((a,b)=>a.x-b.x);const bottomPoints=sortedPoints.slice(2,4).sort((a,b)=>a.x-b.x);const[tl,tr,bl,br]=[topPoints[0],topPoints[1],bottomPoints[0],bottomPoints[1]];const widthA=Math.hypot(br.x-bl.x,br.y-bl.y);const widthB=Math.hypot(tr.x-tl.x,tr.y-tl.y);const maxWidth=Math.max(widthA,widthB);const heightA=Math.hypot(tr.x-br.x,tr.y-br.y);const heightB=Math.hypot(tl.x-bl.x,tl.y-bl.y);const maxHeight=Math.max(heightA,heightB);let dst=new cv.Mat();let dsize=new cv.Size(maxWidth,maxHeight);let srcTri=cv.matFromArray(4,1,cv.CV_32FC2,[tl.x,tl.y,tr.x,tr.y,bl.x,bl.y,br.x,br.y]);let dstTri=cv.matFromArray(4,1,cv.CV_32FC2,[0,0,maxWidth,0,0,maxHeight,maxWidth,maxHeight]);let M=cv.getPerspectiveTransform(srcTri,dstTri);cv.warpPerspective(src,dst,M,dsize,cv.INTER_LINEAR,cv.BORDER_CONSTANT,new cv.Scalar());cv.cvtColor(dst,dst,cv.COLOR_RGBA2GRAY);cv.adaptiveThreshold(dst,dst,255,cv.ADAPTIVE_THRESH_GAUSSIAN_C,cv.THRESH_BINARY,11,12);cv.imshow(canvasOutput,dst);cropCanvas.style.display='none';canvasOutput.style.display='block';cropBtn.style.display='none';confirmScanBtn.style.display='inline-block';src.delete();dst.delete();srcTri.delete();dstTri.delete();M.delete()};scanBtn.addEventListener('click',openScanner);closeScannerBtn.addEventListener('click',closeScanner);captureBtn.addEventListener('click',startCropping);retryScanBtn.addEventListener('click',()=>{videoFeed.style.display='block';cropCanvas.style.display='none';canvasOutput.style.display='none';captureBtn.style.display='flex';retryScanBtn.style.display='none';cropBtn.style.display='none';confirmScanBtn.style.display='none'});cropBtn.addEventListener('click',applyCrop);confirmScanBtn.addEventListener('click',()=>{const imageDataUrl=canvasOutput.toDataURL('image/jpeg',0.9);const doc=new jsPDF();const imgProps=doc.getImageProperties(imageDataUrl);const pdfWidth=doc.internal.pageSize.getWidth();const pdfHeight=(imgProps.height*pdfWidth)/imgProps.width;doc.addImage(imageDataUrl,'JPEG',0,0,pdfWidth,pdfHeight);seciliDosyaBase64=doc.output('datauristring');klasorInput.value='Mobil';konuInput.value='Taranan Belge - '+new Date().toLocaleString('tr-TR');gelisTarihiInput.value=new Date().toISOString().split('T')[0];closeScanner();alert('Belge tarandı ve forma eklendi. Kaydet butonuna basarak işlemi tamamlayın.')});
+
+        // --- Ana Fonksiyonlar ---
+        const formuTemizle = () => { evrakFormu.reset(); seciliDosyaBase64 = null; editingEvrakId = null; formBasligi.textContent = 'Yeni Evrak Ekle'; kaydetBtn.textContent = 'Evrakı Kaydet'; iptalBtn.classList.add('hidden'); pdfInputContainer.parentElement.parentElement.classList.remove('hidden'); pdfDosyaInput.required = true; };
+        const notFormuTemizle = () => { hizliNotFormu.reset(); editingNotId = null; notFormBasligi.textContent = 'Yeni Not Ekle'; notKaydetBtn.textContent = 'Notu Kaydet'; notIptalBtn.classList.add('hidden'); };
         const dosyayiBase64eCevir = (file) => new Promise((resolve, reject) => { const reader = new FileReader(); reader.readAsDataURL(file); reader.onload = () => resolve(reader.result); reader.onerror = error => reject(error); });
-        const pdfMetniniCikar = (file) => new Promise((resolve, reject) => {
-            const fileReader = new FileReader();
-            fileReader.readAsArrayBuffer(file);
-            fileReader.onload = async () => {
-                const typedarray = new Uint8Array(fileReader.result);
-                try {
-                    const pdf = await pdfjsLib.getDocument(typedarray).promise;
-                    let fullText = '';
-                    for (let i = 1; i <= pdf.numPages; i++) {
-                        const page = await pdf.getPage(i);
-                        const textContent = await page.getTextContent();
-                        fullText += textContent.items.map(item => item.str).join('\n');
-                    }
-                    resolve(fullText);
-                } catch (error) { reject(error); }
-            };
-            fileReader.onerror = reject;
-        });
+        const pdfMetniniCikar = (file) => new Promise((resolve, reject) => { const fileReader = new FileReader(); fileReader.readAsArrayBuffer(file); fileReader.onload = async () => { const typedarray = new Uint8Array(fileReader.result); try { const pdf = await pdfjsLib.getDocument(typedarray).promise; let fullText = ''; for (let i = 1; i <= pdf.numPages; i++) { const page = await pdf.getPage(i); const textContent = await page.getTextContent(); fullText += textContent.items.map(item => item.str).join('\n'); } resolve(fullText); } catch (error) { reject(error); } }; fileReader.onerror = reject; });
         const showModal = (evrak) => { modalTitle.textContent = evrak.konu; pdfFrame.src = evrak.dosyaBase64; modal.style.display = 'block'; modalBackdrop.style.display = 'block'; };
         const hideModal = () => { modal.style.display = 'none'; modalBackdrop.style.display = 'none'; pdfFrame.src = ''; };
         const showNoteModal = (evrak) => { noteModalTitle.textContent = `"${evrak.konu}" Notu`; noteContentView.textContent = evrak.notlar; noteModal.style.display = 'block'; noteModalBackdrop.style.display = 'block'; };
         const hideNoteModal = () => { noteModal.style.display = 'none'; noteModalBackdrop.style.display = 'none'; noteContentView.textContent = ''; };
-        const renderKlasorler = () => {
-            const klasorler = [...new Set(evraklar.map(e => e.klasor).filter(Boolean))];
-            klasorListesi.innerHTML = '';
-            const createButton = (name, value) => { const button = document.createElement('button'); button.textContent = name; button.dataset.klasor = value; button.className = `klasor-item px-3 py-1 text-sm font-medium rounded-full cursor-pointer transition-colors duration-200 ${seciliKlasor === value ? 'active' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`; return button; };
-            klasorListesi.appendChild(createButton('Tüm Evraklar', 'all'));
-            klasorler.sort().forEach(klasor => klasorListesi.appendChild(createButton(klasor, klasor)));
-        };
+        const renderKlasorler = () => { const klasorler = [...new Set(evraklar.map(e => e.klasor).filter(Boolean))]; klasorListesi.innerHTML = ''; const createButton = (name, value) => { const button = document.createElement('button'); button.textContent = name; button.dataset.klasor = value; button.className = `klasor-item px-3 py-1 text-sm font-medium rounded-full cursor-pointer transition-colors duration-200 ${seciliKlasor === value ? 'active' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`; return button; }; klasorListesi.appendChild(createButton('Tüm Evraklar', 'all')); klasorler.sort().forEach(klasor => klasorListesi.appendChild(createButton(klasor, klasor))); };
 
-        const renderEvraklar = (filter = '') => {
-            evrakListesiBody.innerHTML = '';
-            let filtrelenmisEvraklar = evraklar;
-            if (seciliKlasor !== 'all') { filtrelenmisEvraklar = filtrelenmisEvraklar.filter(e => e.klasor === seciliKlasor); }
-            if (filter) { filtrelenmisEvraklar = filtrelenmisEvraklar.filter(evrak => { const searchTerm = filter.toLowerCase(); const konuMatch = evrak.konu.toLowerCase().includes(searchTerm); const sayiMatch = evrak.evrakSayisi && evrak.evrakSayisi.toLowerCase().includes(searchTerm); return konuMatch || sayiMatch; }); }
-            if (filtrelenmisEvraklar.length === 0) { evrakListesiBody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-gray-500">Bu kritere uygun evrak bulunamadı.</td></tr>`; return; }
-            
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-
-            filtrelenmisEvraklar.forEach(evrak => {
-                const tr = document.createElement('tr');
-                const durumRenkleri = { 'Bekliyor': 'bg-blue-100 text-blue-800', 'İşlemde': 'bg-yellow-100 text-yellow-800', 'Cevaplandı': 'bg-green-100 text-green-800', 'İşleme Gerek Yok': 'bg-gray-100 text-gray-800' };
-                let ikonlar = '';
-                
-                const uyariTarihi = evrak.uyariTarihi ? new Date(evrak.uyariTarihi) : null;
-                if (uyariTarihi && uyariTarihi <= today) {
-                    ikonlar += `<a href="#" class="text-red-500 view-note" data-id="${evrak.id}" title="Uyarı Tarihi: ${formatDate(evrak.uyariTarihi)}"><span class="alert-icon">🔔</span></a>`;
-                }
-
-                if (evrak.notlar && evrak.notlar.trim() !== '') {
-                    ikonlar += `<a href="#" class="text-yellow-500 hover:text-yellow-700 view-note ml-2" data-id="${evrak.id}" title="Notu Görüntüle">📋</a>`;
-                }
-
-                tr.innerHTML = `<td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 flex items-center">${ikonlar}<span class="${ikonlar ? 'ml-2' : ''}">${evrak.konu}</span></td><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${evrak.evrakSayisi}</td><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatDate(evrak.gelisTarihi)}</td><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatDate(evrak.sonCevapTarihi)}</td><td class="px-6 py-4 whitespace-nowrap"><span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${durumRenkleri[evrak.durum] || 'bg-gray-100 text-gray-800'}">${evrak.durum}</span></td><td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"><a href="#" class="text-blue-600 hover:text-blue-900 view-pdf" data-id="${evrak.id}">Görüntüle</a><a href="#" class="text-green-600 hover:text-green-900 ml-4 edit-evrak" data-id="${evrak.id}">Düzenle</a><a href="#" class="text-red-600 hover:text-red-900 ml-4 delete-evrak" data-id="${evrak.id}">Sil</a></td>`;
-                evrakListesiBody.appendChild(tr);
+        const renderEvraklar = (filter = '') => { evrakListesiBody.innerHTML = ''; let filtrelenmisEvraklar = evraklar; if (seciliKlasor !== 'all') { filtrelenmisEvraklar = filtrelenmisEvraklar.filter(e => e.klasor === seciliKlasor); } if (filter) { filtrelenmisEvraklar = filtrelenmisEvraklar.filter(evrak => { const searchTerm = filter.toLowerCase(); const konuMatch = evrak.konu.toLowerCase().includes(searchTerm); const sayiMatch = evrak.evrakSayisi && evrak.evrakSayisi.toLowerCase().includes(searchTerm); return konuMatch || sayiMatch; }); } if (filtrelenmisEvraklar.length === 0) { evrakListesiBody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-gray-500">Bu kritere uygun evrak bulunamadı.</td></tr>`; return; } const today = new Date(); today.setHours(0, 0, 0, 0); filtrelenmisEvraklar.forEach(evrak => { const tr = document.createElement('tr'); const durumRenkleri = { 'Bekliyor': 'bg-blue-100 text-blue-800', 'İşlemde': 'bg-yellow-100 text-yellow-800', 'Cevaplandı': 'bg-green-100 text-green-800', 'İşleme Gerek Yok': 'bg-gray-100 text-gray-800' }; let ikonlar = ''; const uyariTarihi = evrak.uyariTarihi ? new Date(evrak.uyariTarihi) : null; if (uyariTarihi && uyariTarihi <= today) { ikonlar += `<a href="#" class="text-red-500 view-note" data-id="${evrak.id}" title="Uyarı Tarihi: ${formatDate(evrak.uyariTarihi)}"><span class="alert-icon">🔔</span></a>`; } if (evrak.notlar && evrak.notlar.trim() !== '') { ikonlar += `<a href="#" class="text-yellow-500 hover:text-yellow-700 view-note ml-2" data-id="${evrak.id}" title="Notu Görüntüle">📋</a>`; } tr.innerHTML = `<td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 flex items-center">${ikonlar}<span class="${ikonlar ? 'ml-2' : ''}">${evrak.konu}</span></td><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${evrak.evrakSayisi}</td><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatDate(evrak.gelisTarihi)}</td><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatDate(evrak.sonCevapTarihi)}</td><td class="px-6 py-4 whitespace-nowrap"><span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${durumRenkleri[evrak.durum] || 'bg-gray-100 text-gray-800'}">${evrak.durum}</span></td><td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"><a href="#" class="text-blue-600 hover:text-blue-900 view-pdf" data-id="${evrak.id}">Görüntüle</a><a href="#" class="text-green-600 hover:text-green-900 ml-4 edit-evrak" data-id="${evrak.id}">Düzenle</a><a href="#" class="text-red-600 hover:text-red-900 ml-4 delete-evrak" data-id="${evrak.id}">Sil</a></td>`; evrakListesiBody.appendChild(tr); }); };
+        
+        const renderHizliNotlar = (filter = '') => {
+            hizliNotListesi.innerHTML = '';
+            const filtrelenmisNotlar = hizliNotlar.filter(not => not.baslik.toLowerCase().includes(filter.toLowerCase()) || not.icerik.toLowerCase().includes(filter.toLowerCase()));
+            if (filtrelenmisNotlar.length === 0) { hizliNotListesi.innerHTML = `<p class="text-center py-4 text-gray-500">Kayıtlı not bulunamadı.</p>`; return; }
+            const today = new Date(); today.setHours(0, 0, 0, 0);
+            filtrelenmisNotlar.forEach(not => {
+                const div = document.createElement('div');
+                div.className = 'bg-gray-50 p-4 rounded-lg border';
+                let uyariIkonu = '';
+                const uyariTarihi = not.uyariTarihi ? new Date(not.uyariTarihi) : null;
+                if (uyariTarihi && uyariTarihi <= today) { uyariIkonu = `<span class="text-red-500 alert-icon" title="Uyarı Tarihi: ${formatDate(not.uyariTarihi)}">🔔</span>`; }
+                div.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <div class="flex-1">
+                            <h4 class="font-bold text-gray-800 flex items-center">${uyariIkonu}<span class="${uyariIkonu ? 'ml-2' : ''}">${not.baslik}</span></h4>
+                            <p class="text-sm text-gray-600 mt-1 whitespace-pre-wrap">${not.icerik}</p>
+                        </div>
+                        <div class="flex-shrink-0 ml-4">
+                            <button class="text-green-600 hover:text-green-900 edit-not" data-id="${not.id}">Düzenle</button>
+                            <button class="text-red-600 hover:text-red-900 ml-2 delete-not" data-id="${not.id}">Sil</button>
+                        </div>
+                    </div>
+                `;
+                hizliNotListesi.appendChild(div);
             });
         };
-        
-        const loadEvraklarFromGithub=async()=>{
-            showLoader('Evraklar GitHub\'dan yükleniyor...');
+
+        const loadDataFromGithub = async () => {
+            showLoader('Veriler GitHub\'dan yükleniyor...');
             dataLoadedSuccessfully = false; 
-            try{
-                const r=await fetch(`${apiUrl}?t=${new Date().getTime()}`,{headers:{'Authorization':`token ${githubToken}`,'Accept':'application/vnd.github.v3+json'}});
-                if(r.status===404){
-                    evraklar=[]; evraklarSha=null; dataLoadedSuccessfully = true; 
-                } else if(r.ok){
-                    const d=await r.json(); evraklarSha=d.sha; const c=b64_to_utf8(d.content);
-                    if(c){
-                        try{ evraklar=JSON.parse(c); dataLoadedSuccessfully = true; } 
-                        catch(e){ alert("GitHub'daki evraklar.json dosyası okunamaz halde. Veri kaybını önlemek için işlemler durduruldu."); }
-                    } else { evraklar=[]; dataLoadedSuccessfully = true; }
+            try {
+                const r = await fetch(`${apiUrl}?t=${new Date().getTime()}`, { headers: { 'Authorization': `token ${githubToken}`, 'Accept': 'application/vnd.github.v3+json' } });
+                if (r.status === 404) {
+                    evraklar = []; hizliNotlar = []; evraklarSha = null; dataLoadedSuccessfully = true; 
+                } else if (r.ok) {
+                    const d = await r.json(); evraklarSha = d.sha; const c = b64_to_utf8(d.content);
+                    if (c) {
+                        try { const p = JSON.parse(c); evraklar = p.evraklar || []; hizliNotlar = p.notlar || []; dataLoadedSuccessfully = true; } 
+                        catch (e) { alert("GitHub'daki veri dosyası okunamaz halde. Veri kaybını önlemek için işlemler durduruldu."); }
+                    } else { evraklar = []; hizliNotlar = []; dataLoadedSuccessfully = true; }
                 } else { throw new Error(`GitHub API Hatası: ${(await r.json()).message}`); }
-            } catch(e){
-                alert(`Evraklar GitHub'dan yüklenemedi: ${e.message}. Veri kaybını önlemek için kayıt özellikleri devre dışı bırakıldı. Lütfen sayfayı yenileyip tekrar deneyin.`);
-            } finally{ renderKlasorler(); renderEvraklar(); hideLoader(); }
+            } catch (e) {
+                alert(`Veriler GitHub'dan yüklenemedi: ${e.message}. Veri kaybını önlemek için kayıt özellikleri devre dışı bırakıldı. Lütfen sayfayı yenileyip tekrar deneyin.`);
+            } finally {
+                renderKlasorler(); renderEvraklar(); renderHizliNotlar(); hideLoader();
+            }
         };
 
-        const confirmDataIsSynced=async(t)=>{let a=0;const m=10;const l=1000;while(a<m){try{const r=await fetch(`${apiUrl}?t=${new Date().getTime()}`,{headers:{'Authorization':`token ${githubToken}`,'Accept':'application/vnd.github.v3+json'}});if(r.ok){const d=await r.json();if(d.sha===t){evraklarSha=d.sha;evraklar=JSON.parse(b64_to_utf8(d.content))||[];return}}}catch(e){console.error("Doğrulama denemesi başarısız:",e)}a++;await new Promise(r=>setTimeout(r,l))}console.warn("Veri senkronizasyonu zaman aşımına uğradı.");evraklarSha=t};
+        const confirmDataIsSynced = async (targetSha) => {
+            let attempts = 0; const maxAttempts = 10; const delay = 1000;
+            while (attempts < maxAttempts) {
+                try {
+                    const r = await fetch(`${apiUrl}?t=${new Date().getTime()}`, { headers: { 'Authorization': `token ${githubToken}`, 'Accept': 'application/vnd.github.v3+json' } });
+                    if (r.ok) {
+                        const d = await r.json();
+                        if (d.sha === targetSha) {
+                            evraklarSha = d.sha;
+                            const p = JSON.parse(b64_to_utf8(d.content));
+                            evraklar = p.evraklar || [];
+                            hizliNotlar = p.notlar || [];
+                            return;
+                        }
+                    }
+                } catch (e) { console.error("Doğrulama denemesi başarısız:", e); }
+                attempts++;
+                await new Promise(r => setTimeout(r, delay));
+            }
+            console.warn("Veri senkronizasyonu zaman aşımına uğradı.");
+            evraklarSha = targetSha;
+        };
         
-        const saveEvraklarToGithub=async()=>{
+        const saveDataToGithub = async () => {
             if (!dataLoadedSuccessfully) { alert('Veriler başlangıçta düzgün yüklenemedi. Veri kaybını önlemek için kayıt işlemi durduruldu. Lütfen sayfayı yenileyin.'); return; }
             showLoader('Değişiklikler GitHub\'a kaydediliyor...');
-            try{
-                const c=utf8_to_b64(JSON.stringify(evraklar,null,2));
-                const b={message:`Evrak listesi güncellendi - ${new Date().toISOString()}`,content:c,sha:evraklarSha};
-                const r=await fetch(apiUrl,{method:'PUT',headers:{'Authorization':`token ${githubToken}`,'Accept':'application/vnd.github.v3+json'},body:JSON.stringify(b)});
-                if(r.ok){ const d=await r.json(); showLoader('Değişiklikler kaydedildi. Senkronizasyon bekleniyor...'); await confirmDataIsSynced(d.content.sha); } 
-                else{ throw new Error(`GitHub API Hatası: ${(await r.json()).message}`); }
-            } catch(e){ alert(`Değişiklikler kaydedilirken bir hata oluştu: ${e.message}`); } 
-            finally{ renderKlasorler(); renderEvraklar(aramaInput.value); hideLoader(); }
+            try {
+                const dataToSave = { evraklar: evraklar, notlar: hizliNotlar };
+                const content = utf8_to_b64(JSON.stringify(dataToSave, null, 2));
+                const body = { message: `Veri güncellendi - ${new Date().toISOString()}`, content: content, sha: evraklarSha };
+                const r = await fetch(apiUrl, { method: 'PUT', headers: { 'Authorization': `token ${githubToken}`, 'Accept': 'application/vnd.github.v3+json' }, body: JSON.stringify(body) });
+                if (r.ok) { const d = await r.json(); showLoader('Değişiklikler kaydedildi. Senkronizasyon bekleniyor...'); await confirmDataIsSynced(d.content.sha); } 
+                else { throw new Error(`GitHub API Hatası: ${(await r.json()).message}`); }
+            } catch (e) {
+                alert(`Değişiklikler kaydedilirken bir hata oluştu: ${e.message}`);
+            } finally {
+                renderKlasorler(); renderEvraklar(aramaInput.value); renderHizliNotlar(notAramaInput.value); hideLoader();
+            }
         };
         
-        pdfDosyaInput.addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;try{const t=await pdfMetniniCikar(f);const s=t.match(/Sayı\s*:\s*(.*)/i);if(s)evrakSayisiInput.value=s[1].trim();const k=t.match(/Konu\s*:\s*(.*)/i);if(k)konuInput.value=k[1].trim();const a=t.match(/(\d{2})\.(\d{2})\.(\d{4})/g);if(a){const d=[...new Set(a)].map(s=>{const[d,m,y]=s.split('.');return new Date(y,m-1,d)}).sort((a,b)=>b-a);if(d.length>0)gelisTarihiInput.value=d[0].toISOString().split('T')[0]}const i=t.match(/İlgi\s*:([\s\S]*?)(?=Konu\s*:|\n\n[A-ZÇĞİÖŞÜ])/i);let l=null;if(i&&i[1]){const g=i[1].match(/(\d{2})\.(\d{2})\.(\d{4})/g);if(g){g.forEach(s=>{const[d,m,y]=s.split('.');const c=new Date(y,m-1,d);if(!l||c>l)l=c})}}if(l)sonCevapTarihiInput.value=l.toISOString().split('T')[0];seciliDosyaBase64=await dosyayiBase64eCevir(f)}catch(r){alert("PDF dosyası okunurken bir hata oluştu.")}});
-        
-        evrakFormu.addEventListener('submit',async (e) => {
-            e.preventDefault();
-            const klasor = klasorInput.value.trim();
-            if (editingEvrakId) {
-                const evrak = evraklar.find(i => i.id === editingEvrakId);
-                if (evrak) {
-                    evrak.konu = konuInput.value;
-                    evrak.klasor = klasor;
-                    evrak.gelisTarihi = gelisTarihiInput.value;
-                    evrak.evrakSayisi = evrakSayisiInput.value;
-                    evrak.sonCevapTarihi = sonCevapTarihiInput.value;
-                    evrak.durum = durumInput.value;
-                    evrak.notlar = notlarInput.value;
-                    evrak.uyariTarihi = uyariTarihiInput.value; // Düzeltme
-                }
-            } else {
-                if (!seciliDosyaBase64) { alert('Lütfen bir PDF dosyası seçin veya mobil tarayıcıyı kullanın.'); return; }
-                const yeniEvrak = {
-                    id: Date.now(),
-                    konu: konuInput.value,
-                    klasor: klasor,
-                    gelisTarihi: gelisTarihiInput.value,
-                    evrakSayisi: evrakSayisiInput.value,
-                    sonCevapTarihi: sonCevapTarihiInput.value,
-                    durum: durumInput.value,
-                    notlar: notlarInput.value,
-                    uyariTarihi: uyariTarihiInput.value, // Düzeltme
-                    dosyaBase64: seciliDosyaBase64
-                };
-                evraklar.push(yeniEvrak);
-            }
-            await saveEvraklarToGithub();
-            formuTemizle();
+        // --- Olay Dinleyicileri ---
+        // Sekme Değiştirme
+        tabEvrak.addEventListener('click', () => {
+            tabEvrak.classList.add('active'); tabNotlar.classList.remove('active');
+            evrakTabContent.classList.remove('hidden'); notlarTabContent.classList.add('hidden');
+        });
+        tabNotlar.addEventListener('click', () => {
+            tabNotlar.classList.add('active'); tabEvrak.classList.remove('active');
+            notlarTabContent.classList.remove('hidden'); evrakTabContent.classList.add('hidden');
         });
 
+        // Evrak İşlemleri
+        pdfDosyaInput.addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;try{const t=await pdfMetniniCikar(f);const s=t.match(/Sayı\s*:\s*(.*)/i);if(s)evrakSayisiInput.value=s[1].trim();const k=t.match(/Konu\s*:\s*(.*)/i);if(k)konuInput.value=k[1].trim();const a=t.match(/(\d{2})\.(\d{2})\.(\d{4})/g);if(a){const d=[...new Set(a)].map(s=>{const[d,m,y]=s.split('.');return new Date(y,m-1,d)}).sort((a,b)=>b-a);if(d.length>0)gelisTarihiInput.value=d[0].toISOString().split('T')[0]}const i=t.match(/İlgi\s*:([\s\S]*?)(?=Konu\s*:|\n\n[A-ZÇĞİÖŞÜ])/i);let l=null;if(i&&i[1]){const g=i[1].match(/(\d{2})\.(\d{2})\.(\d{4})/g);if(g){g.forEach(s=>{const[d,m,y]=s.split('.');const c=new Date(y,m-1,d);if(!l||c>l)l=c})}}if(l)sonCevapTarihiInput.value=l.toISOString().split('T')[0];seciliDosyaBase64=await dosyayiBase64eCevir(f)}catch(r){alert("PDF dosyası okunurken bir hata oluştu.")}});
+        evrakFormu.addEventListener('submit',async (e) => { e.preventDefault(); if (editingEvrakId) { const evrak = evraklar.find(i => i.id === editingEvrakId); if (evrak) { Object.assign(evrak, { konu: konuInput.value, klasor: klasorInput.value.trim(), gelisTarihi: gelisTarihiInput.value, evrakSayisi: evrakSayisiInput.value, sonCevapTarihi: sonCevapTarihiInput.value, durum: durumInput.value, notlar: notlarInput.value, uyariTarihi: uyariTarihiInput.value }); } } else { if (!seciliDosyaBase64) { alert('Lütfen bir PDF dosyası seçin veya mobil tarayıcıyı kullanın.'); return; } evraklar.push({ id: Date.now(), konu: konuInput.value, klasor: klasorInput.value.trim(), gelisTarihi: gelisTarihiInput.value, evrakSayisi: evrakSayisiInput.value, sonCevapTarihi: sonCevapTarihiInput.value, durum: durumInput.value, notlar: notlarInput.value, uyariTarihi: uyariTarihiInput.value, dosyaBase64: seciliDosyaBase64 }); } await saveDataToGithub(); formuTemizle(); });
         iptalBtn.addEventListener('click', formuTemizle);
         aramaInput.addEventListener('input', e => renderEvraklar(e.target.value));
         klasorListesi.addEventListener('click', e => { if (e.target.classList.contains('klasor-item')) { seciliKlasor = e.target.dataset.klasor; renderKlasorler(); renderEvraklar(aramaInput.value); } });
-        
-        evrakListesiBody.addEventListener('click', async e => {
-            e.preventDefault();
-            const target = e.target.closest('a');
-            if (!target) return;
-            const evrakId = parseInt(target.dataset.id);
-            const evrak = evraklar.find(d => d.id === evrakId);
-            if (!evrak) return;
+        evrakListesiBody.addEventListener('click', async e => { e.preventDefault(); const target = e.target.closest('a, span'); if (!target) return; const idAttr = target.parentElement.dataset.id || target.dataset.id; if (!idAttr) return; const evrakId = parseInt(idAttr); const evrak = evraklar.find(d => d.id === evrakId); if (!evrak) return; if (target.closest('.view-pdf')) { showModal(evrak); } else if (target.closest('.view-note')) { showNoteModal(evrak); } else if (target.closest('.delete-evrak')) { if (confirm('Bu evrakı silmek istediğinizden emin misiniz?')) { evraklar = evraklar.filter(d => d.id !== evrakId); await saveDataToGithub(); } } else if (target.closest('.edit-evrak')) { editingEvrakId = evrak.id; konuInput.value = evrak.konu; klasorInput.value = evrak.klasor || ''; gelisTarihiInput.value = evrak.gelisTarihi; evrakSayisiInput.value = evrak.evrakSayisi; sonCevapTarihiInput.value = evrak.sonCevapTarihi; durumInput.value = evrak.durum; notlarInput.value = evrak.notlar; uyariTarihiInput.value = evrak.uyariTarihi || ''; formBasligi.textContent = 'Evrakı Düzenle'; kaydetBtn.textContent = 'Değişiklikleri Kaydet'; iptalBtn.classList.remove('hidden'); pdfInputContainer.parentElement.parentElement.classList.add('hidden'); pdfDosyaInput.required = false; window.scrollTo(0, 0); } });
 
-            if (target.classList.contains('view-pdf')) { showModal(evrak); }
-            else if (target.classList.contains('view-note')) { showNoteModal(evrak); }
-            else if (target.classList.contains('delete-evrak')) {
-                if (confirm('Bu evrakı silmek istediğinizden emin misiniz?')) {
-                    evraklar = evraklar.filter(d => d.id !== evrakId);
-                    await saveEvraklarToGithub();
-                }
-            } else if (target.classList.contains('edit-evrak')) {
-                editingEvrakId = evrak.id;
-                konuInput.value = evrak.konu;
-                klasorInput.value = evrak.klasor || '';
-                gelisTarihiInput.value = evrak.gelisTarihi;
-                evrakSayisiInput.value = evrak.evrakSayisi;
-                sonCevapTarihiInput.value = evrak.sonCevapTarihi;
-                durumInput.value = evrak.durum;
-                notlarInput.value = evrak.notlar;
-                uyariTarihiInput.value = evrak.uyariTarihi || ''; // Düzeltme
-                formBasligi.textContent = 'Evrakı Düzenle';
-                kaydetBtn.textContent = 'Değişiklikleri Kaydet';
-                iptalBtn.classList.remove('hidden');
-                pdfInputContainer.parentElement.parentElement.classList.add('hidden');
-                pdfDosyaInput.required = false;
-                window.scrollTo(0, 0);
-            }
-        });
-
-        closeModalBtn.addEventListener('click', hideModal);
-        modalBackdrop.addEventListener('click', hideModal);
-        closeNoteModalBtn.addEventListener('click', hideNoteModal);
-        noteModalBackdrop.addEventListener('click', hideNoteModal);
+        // Hızlı Not İşlemleri
+        hizliNotFormu.addEventListener('submit', async (e) => { e.preventDefault(); if (editingNotId) { const not = hizliNotlar.find(n => n.id === editingNotId); if (not) { not.baslik = notBaslikInput.value; not.icerik = notIcerikInput.value; not.uyariTarihi = notUyariTarihiInput.value; } } else { hizliNotlar.push({ id: Date.now(), baslik: notBaslikInput.value, icerik: notIcerikInput.value, uyariTarihi: notUyariTarihiInput.value }); } await saveDataToGithub(); notFormuTemizle(); });
+        notIptalBtn.addEventListener('click', notFormuTemizle);
+        notAramaInput.addEventListener('input', (e) => renderHizliNotlar(e.target.value));
+        hizliNotListesi.addEventListener('click', async (e) => { const target = e.target; if (!target.dataset.id) return; const notId = parseInt(target.dataset.id); const not = hizliNotlar.find(n => n.id === notId); if (!not) return; if (target.classList.contains('edit-not')) { editingNotId = not.id; notBaslikInput.value = not.baslik; notIcerikInput.value = not.icerik; notUyariTarihiInput.value = not.uyariTarihi || ''; notFormBasligi.textContent = 'Notu Düzenle'; notKaydetBtn.textContent = 'Değişiklikleri Kaydet'; notIptalBtn.classList.remove('hidden'); } else if (target.classList.contains('delete-not')) { if (confirm('Bu notu silmek istediğinizden emin misiniz?')) { hizliNotlar = hizliNotlar.filter(n => n.id !== notId); await saveDataToGithub(); } } });
         
-        loadEvraklarFromGithub();
+        // Modal Kapatma
+        closeModalBtn.addEventListener('click', hideModal); modalBackdrop.addEventListener('click', hideModal);
+        closeNoteModalBtn.addEventListener('click', hideNoteModal); noteModalBackdrop.addEventListener('click', hideNoteModal);
+        
+        // Başlangıç
+        loadDataFromGithub();
     });
     </script>
 </body>
