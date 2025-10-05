@@ -239,8 +239,23 @@
                     const evrakResponses = await Promise.all(evrakPromises);
                     const notResponses = await Promise.all(notPromises);
 
-                    evraklar = evrakResponses.map(res => ({ ...JSON.parse(b64_to_utf8(res.content)), sha: res.sha }));
-                    hizliNotlar = notResponses.map(res => ({ ...JSON.parse(b64_to_utf8(res.content)), sha: res.sha }));
+                    evraklar = evrakResponses.map(res => {
+                        try {
+                            if (res.content) {
+                                return { ...JSON.parse(b64_to_utf8(res.content)), sha: res.sha };
+                            }
+                        } catch (e) { console.error('Bozuk evrak dosyası:', res.name, e); }
+                        return null;
+                    }).filter(Boolean);
+
+                    hizliNotlar = notResponses.map(res => {
+                        try {
+                             if (res.content) {
+                                return { ...JSON.parse(b64_to_utf8(res.content)), sha: res.sha };
+                            }
+                        } catch(e) { console.error('Bozuk not dosyası:', res.name, e); }
+                        return null;
+                    }).filter(Boolean);
 
                     renderAll();
                 } catch (error) {
@@ -491,5 +506,4 @@
     </script>
 </body>
 </html>
-
 
