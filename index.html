@@ -35,6 +35,8 @@
         #magnifier::after { width: 2px; height: 30px; }
         .alert-blink { animation: blink 1.2s linear infinite; }
         @keyframes blink { 50% { opacity: 0.2; } }
+        .highlight { background-color: #fef9c3; transition: background-color 0.5s ease-out; }
+        .task-card ul { max-height: 150px; overflow-y: auto; } /* Kart listeleri için kaydırma */
     </style>
 </head>
 <body class="bg-gray-100 text-gray-800">
@@ -46,6 +48,24 @@
             <h1 class="text-3xl font-bold text-gray-700">Evrak & Not Takip Sistemi</h1>
             <p class="text-gray-500">Gelen evraklarınızı ve notlarınızı yönetin.</p>
         </header>
+
+        <!-- Uyarı Kartları -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+            <div class="bg-white p-4 rounded-lg shadow-md border border-orange-200 task-card">
+                <h3 class="text-lg font-semibold mb-2 text-orange-700 flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.414-1.414L11 10.586V6z" clip-rule="evenodd" /></svg>
+                    Yaklaşan / Geçen İşlemler
+                </h3>
+                <ul id="bekleyenIslemlerListesi" class="text-sm space-y-1"></ul>
+            </div>
+            <div class="bg-white p-4 rounded-lg shadow-md border border-red-200 task-card">
+                <h3 class="text-lg font-semibold mb-2 text-red-700 flex items-center">
+                   <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1.332A6.993 6.993 0 0116.991 9H17a1 1 0 110 2h-.009A6.994 6.994 0 0111 16.668V18a1 1 0 11-2 0v-1.332A6.994 6.994 0 013.009 11H3a1 1 0 110-2h.009A6.993 6.993 0 019 4.332V3a1 1 0 011-1zm4.075 8.75a1 1 0 00-1.414-1.414L10 11.93l-2.661-2.595a1 1 0 00-1.415 1.415l3.333 3.25a1 1 0 001.415 0l3.333-3.25z" clip-rule="evenodd" /></svg>
+                    Aktif Uyarılar
+                </h3>
+                <ul id="bekleyenUyarılarListesi" class="text-sm space-y-1"></ul>
+            </div>
+        </div>
         
         <!-- Sekme Menüsü -->
         <div class="mb-8 border-b border-gray-200">
@@ -182,6 +202,8 @@
             const cropCanvas = document.getElementById('cropCanvas');
             const canvasOutput = document.getElementById('canvasOutput');
             const magnifier = document.getElementById('magnifier');
+            const bekleyenIslemlerListesi = document.getElementById('bekleyenIslemlerListesi');
+            const bekleyenUyarılarListesi = document.getElementById('bekleyenUyarılarListesi');
 
             // --- GitHub API Ayarları ---
             const p1 = 'ghp_2KS6iY7t1ka6bKyH';
@@ -207,7 +229,7 @@
             const b64_to_utf8 = (str) => decodeURIComponent(escape(atob(str)));
 
             // --- Tarayıcı Fonksiyonları ---
-            const openScanner=async()=>{if(!cvIsReady){alert('Tarayıcı kütüphanesi henüz hazır değil.');return}try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1920},height:{ideal:1080}}});videoFeed.srcObject=stream;videoFeed.style.display='block';cropCanvas.style.display='none';canvasOutput.style.display='none';scannerModal.style.display='flex';captureBtn.style.display='flex';retryScanBtn.style.display='none';cropBtn.style.display='none';confirmScanBtn.style.display='none';videoFeed.play()}catch(err){alert("Kameraya erişilemedi. Lütfen izinleri kontrol edin.")}};const closeScanner=()=>{if(stream){stream.getTracks().forEach(track=>track.stop())}scannerModal.style.display='none'};const startCropping=()=>{capturedImage=document.createElement('canvas');capturedImage.width=videoFeed.videoWidth;capturedImage.height=videoFeed.videoHeight;capturedImage.getContext('2d').drawImage(videoFeed,0,0);videoFeed.style.display='none';cropCanvas.style.display='block';captureBtn.style.display='none';retryScanBtn.style.display='inline-block';cropBtn.style.display='inline-block';const margin=0.15;cornerPoints=[{x:capturedImage.width*margin,y:capturedImage.height*margin},{x:capturedImage.width*(1-margin),y:capturedImage.height*margin},{x:capturedImage.width*(1-margin),y:capturedImage.height*(1-margin)},{x:capturedImage.width*margin,y:capturedImage.height*(1-margin)},];cropCanvas.width=scannerModal.clientWidth;cropCanvas.height=scannerModal.clientHeight*0.85;drawCroppingUI()};const drawCroppingUI=()=>{const ctx=cropCanvas.getContext('2d');const canvasWidth=cropCanvas.width;const canvasHeight=cropCanvas.height;const imgRatio=capturedImage.width/capturedImage.height;const canvasRatio=canvasWidth/canvasHeight;let drawWidth,drawHeight,offsetX,offsetY;if(imgRatio>canvasRatio){drawWidth=canvasWidth;drawHeight=drawWidth/imgRatio;offsetX=0;offsetY=(canvasHeight-drawHeight)/2}else{drawHeight=canvasHeight;drawWidth=drawHeight*imgRatio;offsetY=0;offsetX=(canvasWidth-drawWidth)/2}ctx.clearRect(0,0,canvasWidth,canvasHeight);ctx.drawImage(capturedImage,offsetX,offsetY,drawWidth,drawHeight);ctx.strokeStyle='#00f';ctx.lineWidth=2;ctx.beginPath();const toCanvasPoint=p=>({x:(p.x/capturedImage.width)*drawWidth+offsetX,y:(p.y/capturedImage.height)*drawHeight+offsetY});const canvasPoints=cornerPoints.map(toCanvasPoint);ctx.moveTo(canvasPoints[0].x,canvasPoints[0].y);for(let i=1;i<canvasPoints.length;i++){ctx.lineTo(canvasPoints[i].x,canvasPoints[i].y)}ctx.closePath();ctx.stroke();ctx.fillStyle='#00f';canvasPoints.forEach(p=>{ctx.beginPath();ctx.arc(p.x,p.y,10,0,2*Math.PI);ctx.fill()})};const getTouchPos=(canvas,evt)=>{const rect=canvas.getBoundingClientRect();const touch=evt.touches[0];return{x:touch.clientX-rect.left,y:touch.clientY-rect.top}};const getMousePos=(canvas,evt)=>{const rect=canvas.getBoundingClientRect();return{x:evt.clientX-rect.left,y:evt.clientY-rect.top}};const handleDragStart=(pos)=>{const canvasPoints=cornerPoints.map(p=>{const imgRatio=capturedImage.width/capturedImage.height;const canvasRatio=cropCanvas.width/cropCanvas.height;let drawWidth,drawHeight,offsetX,offsetY;if(imgRatio>canvasRatio){drawWidth=cropCanvas.width;drawHeight=drawWidth/imgRatio;offsetX=0;offsetY=(cropCanvas.height-drawHeight)/2}else{drawHeight=cropCanvas.height;drawWidth=drawHeight*imgRatio;offsetY=0;offsetX=(cropCanvas.width-drawWidth)/2}return{x:(p.x/capturedImage.width)*drawWidth+offsetX,y:(p.y/capturedImage.height)*drawHeight+offsetY}});for(let i=0;i<canvasPoints.length;i++){const dist=Math.hypot(pos.x-canvasPoints[i].x,pos.y-canvasPoints[i].y);if(dist<20){draggingPointIndex=i;cropCanvas.style.cursor='grabbing';break}}};const handleDragMove=(pos)=>{if(draggingPointIndex===-1)return;const imgRatio=capturedImage.width/capturedImage.height;const canvasRatio=cropCanvas.width/cropCanvas.height;let drawWidth,drawHeight,offsetX,offsetY;if(imgRatio>canvasRatio){drawWidth=cropCanvas.width;drawHeight=drawWidth/imgRatio;offsetX=0;offsetY=(cropCanvas.height-drawHeight)/2}else{drawHeight=cropCanvas.height;drawWidth=drawHeight*imgRatio;offsetY=0;offsetX=(cropCanvas.width-drawWidth)/2}cornerPoints[draggingPointIndex]={x:((pos.x-offsetX)/drawWidth)*capturedImage.width,y:((pos.y-offsetY)/drawHeight)*capturedImage.height,};const magnifySize=120;magnifier.style.display='block';magnifier.style.left=`${pos.x-magnifySize/2}px`;magnifier.style.top=`${pos.y-magnifySize/2}px`;magnifier.style.background=`url(${capturedImage.toDataURL()})`;const bgPosX=-(cornerPoints[draggingPointIndex].x*2-magnifySize/2);const bgPosY=-(cornerPoints[draggingPointIndex].y*2-magnifySize/2);magnifier.style.backgroundPosition=`${bgPosX}px ${bgPosY}px`;magnifier.style.backgroundSize=`${capturedImage.width*2}px ${capturedImage.height*2}px`;drawCroppingUI()};const handleDragEnd=()=>{draggingPointIndex=-1;cropCanvas.style.cursor='grab';magnifier.style.display='none'};cropCanvas.addEventListener('mousedown',(e)=>handleDragStart(getMousePos(cropCanvas,e)));cropCanvas.addEventListener('mousemove',(e)=>handleDragMove(getMousePos(cropCanvas,e)));cropCanvas.addEventListener('mouseup',handleDragEnd);cropCanvas.addEventListener('mouseleave',handleDragEnd);cropCanvas.addEventListener('touchstart',(e)=>{e.preventDefault();handleDragStart(getTouchPos(cropCanvas,e))});cropCanvas.addEventListener('touchmove',(e)=>{e.preventDefault();handleDragMove(getTouchPos(cropCanvas,e))});cropCanvas.addEventListener('touchend',handleDragEnd);const applyCrop=()=>{let src=cv.imread(capturedImage);const sortedPoints=[...cornerPoints].sort((a,b)=>a.y-b.y);const topPoints=sortedPoints.slice(0,2).sort((a,b)=>a.x-b.x);const bottomPoints=sortedPoints.slice(2,4).sort((a,b)=>a.x-b.x);const[tl,tr,bl,br]=[topPoints[0],topPoints[1],bottomPoints[0],bottomPoints[1]];const widthA=Math.hypot(br.x-bl.x,br.y-bl.y);const widthB=Math.hypot(tr.x-tl.x,tr.y-tl.y);const maxWidth=Math.max(widthA,widthB);const heightA=Math.hypot(tr.x-br.x,tr.y-br.y);const heightB=Math.hypot(tl.x-bl.x,tl.y-bl.y);const maxHeight=Math.max(heightA,heightB);let dst=new cv.Mat();let dsize=new cv.Size(maxWidth,maxHeight);let srcTri=cv.matFromArray(4,1,cv.CV_32FC2,[tl.x,tl.y,tr.x,tr.y,bl.x,bl.y,br.x,br.y]);let dstTri=cv.matFromArray(4,1,cv.CV_32FC2,[0,0,maxWidth,0,0,maxHeight,maxWidth,maxHeight]);let M=cv.getPerspectiveTransform(srcTri,dstTri);cv.warpPerspective(src,dst,M,dsize,cv.INTER_LINEAR,cv.BORDER_CONSTANT,new cv.Scalar());cv.cvtColor(dst,dst,cv.COLOR_RGBA2GRAY);cv.adaptiveThreshold(dst,dst,255,cv.ADAPTIVE_THRESH_GAUSSIAN_C,cv.THRESH_BINARY,11,12);cv.imshow(canvasOutput,dst);cropCanvas.style.display='none';canvasOutput.style.display='block';cropBtn.style.display='none';confirmScanBtn.style.display='inline-block';src.delete();dst.delete();srcTri.delete();dstTri.delete();M.delete()};scanBtn.addEventListener('click',openScanner);closeScannerBtn.addEventListener('click',closeScanner);captureBtn.addEventListener('click',startCropping);retryScanBtn.addEventListener('click',()=>{videoFeed.style.display='block';cropCanvas.style.display='none';canvasOutput.style.display='none';captureBtn.style.display='flex';retryScanBtn.style.display='none';cropBtn.style.display='none';confirmScanBtn.style.display='none'});cropBtn.addEventListener('click',applyCrop);confirmScanBtn.addEventListener('click',()=>{const imageDataUrl=canvasOutput.toDataURL('image/jpeg',0.9);const doc=new jsPDF();const imgProps=doc.getImageProperties(imageDataUrl);const pdfWidth=doc.internal.pageSize.getWidth();const pdfHeight=(imgProps.height*pdfWidth)/imgProps.width;doc.addImage(imageDataUrl,'JPEG',0,0,pdfWidth,pdfHeight);seciliDosyaBase64=doc.output('datauristring');klasorInput.value='Mobil';konuInput.value='Taranan Belge - '+new Date().toLocaleString('tr-TR');gelisTarihiInput.value=new Date().toISOString().split('T')[0];closeScanner();alert('Belge tarandı ve forma eklendi. Kaydet butonuna basarak işlemi tamamlayın.')});
+           const openScanner=async()=>{if(!cvIsReady){alert('Tarayıcı kütüphanesi henüz hazır değil.');return}try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1920},height:{ideal:1080}}});videoFeed.srcObject=stream;videoFeed.style.display='block';cropCanvas.style.display='none';canvasOutput.style.display='none';scannerModal.style.display='flex';captureBtn.style.display='flex';retryScanBtn.style.display='none';cropBtn.style.display='none';confirmScanBtn.style.display='none';videoFeed.play()}catch(err){alert("Kameraya erişilemedi. Lütfen izinleri kontrol edin.")}};const closeScanner=()=>{if(stream){stream.getTracks().forEach(track=>track.stop())}scannerModal.style.display='none'};const startCropping=()=>{capturedImage=document.createElement('canvas');capturedImage.width=videoFeed.videoWidth;capturedImage.height=videoFeed.videoHeight;capturedImage.getContext('2d').drawImage(videoFeed,0,0);videoFeed.style.display='none';cropCanvas.style.display='block';captureBtn.style.display='none';retryScanBtn.style.display='inline-block';cropBtn.style.display='inline-block';const margin=0.15;cornerPoints=[{x:capturedImage.width*margin,y:capturedImage.height*margin},{x:capturedImage.width*(1-margin),y:capturedImage.height*margin},{x:capturedImage.width*(1-margin),y:capturedImage.height*(1-margin)},{x:capturedImage.width*margin,y:capturedImage.height*(1-margin)},];cropCanvas.width=scannerModal.clientWidth;cropCanvas.height=scannerModal.clientHeight*0.85;drawCroppingUI()};const drawCroppingUI=()=>{const ctx=cropCanvas.getContext('2d');const canvasWidth=cropCanvas.width;const canvasHeight=cropCanvas.height;const imgRatio=capturedImage.width/capturedImage.height;const canvasRatio=canvasWidth/canvasHeight;let drawWidth,drawHeight,offsetX,offsetY;if(imgRatio>canvasRatio){drawWidth=canvasWidth;drawHeight=drawWidth/imgRatio;offsetX=0;offsetY=(canvasHeight-drawHeight)/2}else{drawHeight=canvasHeight;drawWidth=drawHeight*imgRatio;offsetY=0;offsetX=(canvasWidth-drawWidth)/2}ctx.clearRect(0,0,canvasWidth,canvasHeight);ctx.drawImage(capturedImage,offsetX,offsetY,drawWidth,drawHeight);ctx.strokeStyle='#00f';ctx.lineWidth=2;ctx.beginPath();const toCanvasPoint=p=>({x:(p.x/capturedImage.width)*drawWidth+offsetX,y:(p.y/capturedImage.height)*drawHeight+offsetY});const canvasPoints=cornerPoints.map(toCanvasPoint);ctx.moveTo(canvasPoints[0].x,canvasPoints[0].y);for(let i=1;i<canvasPoints.length;i++){ctx.lineTo(canvasPoints[i].x,canvasPoints[i].y)}ctx.closePath();ctx.stroke();ctx.fillStyle='#00f';canvasPoints.forEach(p=>{ctx.beginPath();ctx.arc(p.x,p.y,10,0,2*Math.PI);ctx.fill()})};const getTouchPos=(canvas,evt)=>{const rect=canvas.getBoundingClientRect();const touch=evt.touches[0];return{x:touch.clientX-rect.left,y:touch.clientY-rect.top}};const getMousePos=(canvas,evt)=>{const rect=canvas.getBoundingClientRect();return{x:evt.clientX-rect.left,y:evt.clientY-rect.top}};const handleDragStart=(pos)=>{const canvasPoints=cornerPoints.map(p=>{const imgRatio=capturedImage.width/capturedImage.height;const canvasRatio=cropCanvas.width/cropCanvas.height;let drawWidth,drawHeight,offsetX,offsetY;if(imgRatio>canvasRatio){drawWidth=cropCanvas.width;drawHeight=drawWidth/imgRatio;offsetX=0;offsetY=(cropCanvas.height-drawHeight)/2}else{drawHeight=cropCanvas.height;drawWidth=drawHeight*imgRatio;offsetY=0;offsetX=(cropCanvas.width-drawWidth)/2}return{x:(p.x/capturedImage.width)*drawWidth+offsetX,y:(p.y/capturedImage.height)*drawHeight+offsetY}});for(let i=0;i<canvasPoints.length;i++){const dist=Math.hypot(pos.x-canvasPoints[i].x,pos.y-canvasPoints[i].y);if(dist<20){draggingPointIndex=i;cropCanvas.style.cursor='grabbing';break}}};const handleDragMove=(pos)=>{if(draggingPointIndex===-1)return;const imgRatio=capturedImage.width/capturedImage.height;const canvasRatio=cropCanvas.width/cropCanvas.height;let drawWidth,drawHeight,offsetX,offsetY;if(imgRatio>canvasRatio){drawWidth=cropCanvas.width;drawHeight=drawWidth/imgRatio;offsetX=0;offsetY=(cropCanvas.height-drawHeight)/2}else{drawHeight=cropCanvas.height;drawWidth=drawHeight*imgRatio;offsetY=0;offsetX=(cropCanvas.width-drawWidth)/2}cornerPoints[draggingPointIndex]={x:((pos.x-offsetX)/drawWidth)*capturedImage.width,y:((pos.y-offsetY)/drawHeight)*capturedImage.height,};const magnifySize=120;magnifier.style.display='block';magnifier.style.left=`${pos.x-magnifySize/2}px`;magnifier.style.top=`${pos.y-magnifySize/2}px`;magnifier.style.background=`url(${capturedImage.toDataURL()})`;const bgPosX=-(cornerPoints[draggingPointIndex].x*2-magnifySize/2);const bgPosY=-(cornerPoints[draggingPointIndex].y*2-magnifySize/2);magnifier.style.backgroundPosition=`${bgPosX}px ${bgPosY}px`;magnifier.style.backgroundSize=`${capturedImage.width*2}px ${capturedImage.height*2}px`;drawCroppingUI()};const handleDragEnd=()=>{draggingPointIndex=-1;cropCanvas.style.cursor='grab';magnifier.style.display='none'};cropCanvas.addEventListener('mousedown',(e)=>handleDragStart(getMousePos(cropCanvas,e)));cropCanvas.addEventListener('mousemove',(e)=>handleDragMove(getMousePos(cropCanvas,e)));cropCanvas.addEventListener('mouseup',handleDragEnd);cropCanvas.addEventListener('mouseleave',handleDragEnd);cropCanvas.addEventListener('touchstart',(e)=>{e.preventDefault();handleDragStart(getTouchPos(cropCanvas,e))});cropCanvas.addEventListener('touchmove',(e)=>{e.preventDefault();handleDragMove(getTouchPos(cropCanvas,e))});cropCanvas.addEventListener('touchend',handleDragEnd);const applyCrop=()=>{let src=cv.imread(capturedImage);const sortedPoints=[...cornerPoints].sort((a,b)=>a.y-b.y);const topPoints=sortedPoints.slice(0,2).sort((a,b)=>a.x-b.x);const bottomPoints=sortedPoints.slice(2,4).sort((a,b)=>a.x-b.x);const[tl,tr,bl,br]=[topPoints[0],topPoints[1],bottomPoints[0],bottomPoints[1]];const widthA=Math.hypot(br.x-bl.x,br.y-bl.y);const widthB=Math.hypot(tr.x-tl.x,tr.y-tl.y);const maxWidth=Math.max(widthA,widthB);const heightA=Math.hypot(tr.x-br.x,tr.y-br.y);const heightB=Math.hypot(tl.x-bl.x,tl.y-bl.y);const maxHeight=Math.max(heightA,heightB);let dst=new cv.Mat();let dsize=new cv.Size(maxWidth,maxHeight);let srcTri=cv.matFromArray(4,1,cv.CV_32FC2,[tl.x,tl.y,tr.x,tr.y,bl.x,bl.y,br.x,br.y]);let dstTri=cv.matFromArray(4,1,cv.CV_32FC2,[0,0,maxWidth,0,0,maxHeight,maxWidth,maxHeight]);let M=cv.getPerspectiveTransform(srcTri,dstTri);cv.warpPerspective(src,dst,M,dsize,cv.INTER_LINEAR,cv.BORDER_CONSTANT,new cv.Scalar());cv.cvtColor(dst,dst,cv.COLOR_RGBA2GRAY);cv.adaptiveThreshold(dst,dst,255,cv.ADAPTIVE_THRESH_GAUSSIAN_C,cv.THRESH_BINARY,11,12);cv.imshow(canvasOutput,dst);cropCanvas.style.display='none';canvasOutput.style.display='block';cropBtn.style.display='none';confirmScanBtn.style.display='inline-block';src.delete();dst.delete();srcTri.delete();dstTri.delete();M.delete()};scanBtn.addEventListener('click',openScanner);closeScannerBtn.addEventListener('click',closeScanner);captureBtn.addEventListener('click',startCropping);retryScanBtn.addEventListener('click',()=>{videoFeed.style.display='block';cropCanvas.style.display='none';canvasOutput.style.display='none';captureBtn.style.display='flex';retryScanBtn.style.display='none';cropBtn.style.display='none';confirmScanBtn.style.display='none'});cropBtn.addEventListener('click',applyCrop);confirmScanBtn.addEventListener('click',()=>{const imageDataUrl=canvasOutput.toDataURL('image/jpeg',0.9);const doc=new jsPDF();const imgProps=doc.getImageProperties(imageDataUrl);const pdfWidth=doc.internal.pageSize.getWidth();const pdfHeight=(imgProps.height*pdfWidth)/imgProps.width;doc.addImage(imageDataUrl,'JPEG',0,0,pdfWidth,pdfHeight);seciliDosyaBase64=doc.output('datauristring');klasorInput.value='Mobil';konuInput.value='Taranan Belge - '+new Date().toLocaleString('tr-TR');gelisTarihiInput.value=new Date().toISOString().split('T')[0];closeScanner();alert('Belge tarandı ve forma eklendi. Kaydet butonuna basarak işlemi tamamlayın.')});
             
             // --- GitHub API Fonksiyonları ---
             const githubApiCall = async (url, options = {}) => {
@@ -310,6 +332,8 @@
                 
                 filtrelenmisEvraklar.sort((a,b) => b.id - a.id).forEach(evrak => { 
                     const tr = document.createElement('tr'); 
+                    tr.dataset.id = evrak.id; // Karttan tıklayınca bulmak için ID ekle
+                    tr.dataset.type = 'evrak';
                     const durumRenkleri = { 'Bekliyor': 'bg-blue-100 text-blue-800', 'İşlemde': 'bg-yellow-100 text-yellow-800', 'Cevaplandı': 'bg-green-100 text-green-800', 'İşleme Gerek Yok': 'bg-gray-100 text-gray-800' }; 
                     let ikonlar = ''; 
                     
@@ -348,6 +372,8 @@
                  filtrelenmisNotlar.sort((a,b) => b.id - a.id).forEach(not => {
                     const div = document.createElement('div');
                     div.className = 'bg-gray-50 p-4 rounded-lg border';
+                    div.dataset.id = not.id; // Karttan tıklayınca bulmak için ID ekle
+                    div.dataset.type = 'not';
                     let uyariIkonu = '';
 
                     let isAlertActive = false;
@@ -384,7 +410,96 @@
                     hizliNotListesi.appendChild(div);
                 });
             };
-             const renderAll = () => { renderKlasorler(); renderEvraklar(aramaInput.value); renderHizliNotlar(notAramaInput.value); };
+
+            const renderBekleyenIslemler = () => {
+                bekleyenIslemlerListesi.innerHTML = '';
+                const today = new Date(); today.setHours(0,0,0,0);
+                const threeDaysLater = new Date(today); threeDaysLater.setDate(today.getDate() + 3);
+
+                const bekleyenEvraklar = evraklar.filter(e => 
+                    (e.durum === 'Bekliyor' || e.durum === 'İşlemde') && e.sonCevapTarihi
+                ).map(e => {
+                    const sonTarih = new Date(e.sonCevapTarihi); sonTarih.setHours(0,0,0,0);
+                    const farkMs = sonTarih - today;
+                    const farkGun = Math.ceil(farkMs / (1000 * 60 * 60 * 24));
+                    return { ...e, farkGun, sonTarih };
+                }).filter(e => e.sonTarih <= threeDaysLater) // Son 3 gün veya geçmiş
+                  .sort((a, b) => a.sonTarih - b.sonTarih); // En yakın tarih üste gelsin
+
+                if (bekleyenEvraklar.length === 0) {
+                     bekleyenIslemlerListesi.innerHTML = '<li class="text-gray-500">Yaklaşan veya geçen işlem bulunmuyor.</li>';
+                     return;
+                }
+
+                bekleyenEvraklar.forEach(evrak => {
+                    const li = document.createElement('li');
+                    const isGecmis = evrak.sonTarih < today;
+                    const isYakin = evrak.farkGun >= 0 && evrak.farkGun <= 3;
+                    li.className = `cursor-pointer hover:bg-gray-100 p-1 rounded ${isGecmis || isYakin ? 'text-red-600 font-medium' : ''}`;
+                    li.dataset.id = evrak.id;
+                    li.dataset.type = 'evrak';
+                    li.innerHTML = `
+                       <span class="${isGecmis || isYakin ? 'alert-blink' : ''}">${evrak.konu}</span> - Son Tarih: ${formatDate(evrak.sonCevapTarihi)} ${isGecmis ? '(Geçti)' : ''}
+                    `;
+                    bekleyenIslemlerListesi.appendChild(li);
+                });
+            };
+
+            const renderBekleyenUyarılar = () => {
+                 bekleyenUyarılarListesi.innerHTML = '';
+                 const today = new Date(); const currentDay = today.getDate(); today.setHours(0, 0, 0, 0); 
+                 let aktifUyarılar = [];
+
+                 evraklar.forEach(e => {
+                    let uyariAktif = false; let uyariBilgi = '';
+                    const uyariTarihi = e.uyariTarihi ? new Date(e.uyariTarihi) : null;
+                    if (uyariTarihi && uyariTarihi <= today) { uyariAktif = true; uyariBilgi = `Tarih: ${formatDate(e.uyariTarihi)}`; }
+                    const uyariGunu = e.uyariGunu ? parseInt(e.uyariGunu) : 0;
+                    if (!uyariAktif && uyariGunu > 0 && currentDay >= uyariGunu) { uyariAktif = true; uyariBilgi = `Her Ayın ${e.uyariGunu}. Günü`; }
+                    if (uyariAktif) aktifUyarılar.push({ id: e.id, type: 'evrak', text: e.konu, bilgi: uyariBilgi });
+                 });
+
+                 hizliNotlar.forEach(n => {
+                    let uyariAktif = false; let uyariBilgi = '';
+                    const uyariTarihi = n.uyariTarihi ? new Date(n.uyariTarihi) : null;
+                    if (uyariTarihi && uyariTarihi <= today) { uyariAktif = true; uyariBilgi = `Tarih: ${formatDate(n.uyariTarihi)}`; }
+                    const uyariGunu = n.uyariGunu ? parseInt(n.uyariGunu) : 0;
+                    if (!uyariAktif && uyariGunu > 0 && currentDay >= uyariGunu) { uyariAktif = true; uyariBilgi = `Her Ayın ${n.uyariGunu}. Günü`; }
+                    if (uyariAktif) aktifUyarılar.push({ id: n.id, type: 'not', text: n.baslik, bilgi: uyariBilgi });
+                 });
+
+                 if (aktifUyarılar.length === 0) {
+                     bekleyenUyarılarListesi.innerHTML = '<li class="text-gray-500">Aktif uyarı bulunmuyor.</li>';
+                     return;
+                 }
+
+                 aktifUyarılar.forEach(uyari => {
+                    const li = document.createElement('li');
+                    li.className = 'cursor-pointer hover:bg-gray-100 p-1 rounded text-red-600 font-medium alert-blink';
+                    li.dataset.id = uyari.id;
+                    li.dataset.type = uyari.type;
+                    li.textContent = `${uyari.type === 'evrak' ? 'Evrak' : 'Not'}: ${uyari.text} (${uyari.bilgi})`;
+                    bekleyenUyarılarListesi.appendChild(li);
+                 });
+            };
+
+             const renderAll = () => { 
+                renderKlasorler(); 
+                renderEvraklar(aramaInput.value); 
+                renderHizliNotlar(notAramaInput.value); 
+                renderBekleyenIslemler(); // Kartları da güncelle
+                renderBekleyenUyarılar(); // Kartları da güncelle
+            };
+
+            const scrollToItem = (id, type) => {
+                 const listElement = type === 'evrak' ? evrakListesiBody : hizliNotListesi;
+                 const itemElement = listElement.querySelector(`[data-id="${id}"]`);
+                 if (itemElement) {
+                     itemElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                     itemElement.classList.add('highlight');
+                     setTimeout(() => itemElement.classList.remove('highlight'), 1500); // Vurguyu kaldır
+                 }
+            };
 
             // --- Olay Dinleyicileri ---
             tabEvrak.addEventListener('click', () => { tabEvrak.classList.add('active'); tabNotlar.classList.remove('active'); evrakTabContent.classList.remove('hidden'); notlarTabContent.classList.add('hidden'); });
@@ -407,7 +522,7 @@
                         const newEvrak = { ...data, id: Date.now(), dosyaBase64: seciliDosyaBase64 };
                         await saveDataToGithub(`${evraklarPath}/${newEvrak.id}.json`, newEvrak);
                     } 
-                    await loadDataFromGithub();
+                    await loadDataFromGithub(); // Tekrar yükle ve render et
                     formuTemizle(); 
                 } catch(error) {
                     alert(`Hata: ${error.message}`);
@@ -427,7 +542,7 @@
                     if (confirm('Bu evrakı silmek istediğinizden emin misiniz?')) { 
                         showLoader('Siliniyor...');
                         await deleteDataFromGithub(`${evraklarPath}/${evrak.id}.json`, evrak.sha);
-                        await loadDataFromGithub();
+                        await loadDataFromGithub(); // Tekrar yükle ve render et
                         hideLoader();
                     } 
                 } 
@@ -466,7 +581,7 @@
                         const newNot = { ...data, id: Date.now() };
                         await saveDataToGithub(`${notlarPath}/${newNot.id}.json`, newNot);
                     } 
-                    await loadDataFromGithub();
+                    await loadDataFromGithub(); // Tekrar yükle ve render et
                     notFormuTemizle();
                 } catch(error) {
                     alert(`Hata: ${error.message}`);
@@ -492,7 +607,7 @@
                     if (confirm('Bu notu silmek istediğinizden emin misiniz?')) { 
                         showLoader('Siliniyor...');
                         await deleteDataFromGithub(`${notlarPath}/${not.id}.json`, not.sha);
-                        await loadDataFromGithub();
+                        await loadDataFromGithub(); // Tekrar yükle ve render et
                         hideLoader();
                     } 
                 } 
@@ -500,6 +615,18 @@
             closeModalBtn.addEventListener('click', hideModal); modalBackdrop.addEventListener('click', hideModal);
             closeNoteModalBtn.addEventListener('click', hideNoteModal); noteModalBackdrop.addEventListener('click', hideNoteModal);
             
+            // Kartlardaki öğelere tıklama
+            bekleyenIslemlerListesi.addEventListener('click', (e) => {
+                 if(e.target.tagName === 'LI' && e.target.dataset.id) {
+                     scrollToItem(e.target.dataset.id, e.target.dataset.type);
+                 }
+            });
+             bekleyenUyarılarListesi.addEventListener('click', (e) => {
+                 if(e.target.tagName === 'LI' && e.target.dataset.id) {
+                     scrollToItem(e.target.dataset.id, e.target.dataset.type);
+                 }
+            });
+
             // Başlangıç
             loadDataFromGithub();
         });
