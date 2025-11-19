@@ -49,7 +49,9 @@
         
         .alert-blink { animation: blink 1.2s linear infinite; }
         @keyframes blink { 50% { opacity: 0.2; } }
-        .highlight { background-color: #fef9c3; transition: background-color 0.5s ease-out; }
+        /* Vurgulama efekti için stil */
+        .highlight { background-color: #fef08a !important; transition: background-color 1s ease-out; }
+        .dark .highlight { background-color: #854d0e !important; }
         .task-card ul { max-height: 150px; overflow-y: auto; }
         
         /* Toast Notification */
@@ -107,14 +109,14 @@
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.414-1.414L11 10.586V6z" clip-rule="evenodd" /></svg>
                     Yaklaşan / Geçen İşlemler
                 </h3>
-                <ul id="bekleyenIslemlerListesi" class="text-sm space-y-1 dark:text-gray-300"></ul>
+                <ul id="bekleyenIslemlerListesi" class="text-sm space-y-1 dark:text-gray-300 cursor-pointer"></ul>
             </div>
             <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md border border-red-200 dark:border-red-900 task-card">
                 <h3 class="text-lg font-semibold mb-2 text-red-700 dark:text-red-400 flex items-center">
                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1.332A6.993 6.993 0 0116.991 9H17a1 1 0 110 2h-.009A6.994 6.994 0 0111 16.668V18a1 1 0 11-2 0v-1.332A6.994 6.994 0 013.009 11H3a1 1 0 110-2h.009A6.993 6.993 0 019 4.332V3a1 1 0 011-1zm4.075 8.75a1 1 0 00-1.414-1.414L10 11.93l-2.661-2.595a1 1 0 00-1.415 1.415l3.333 3.25a1 1 0 001.415 0l3.333-3.25z" clip-rule="evenodd" /></svg>
                     Aktif Uyarılar
                 </h3>
-                <ul id="bekleyenUyarılarListesi" class="text-sm space-y-1 dark:text-gray-300"></ul>
+                <ul id="bekleyenUyarılarListesi" class="text-sm space-y-1 dark:text-gray-300 cursor-pointer"></ul>
             </div>
         </div>
         
@@ -588,13 +590,43 @@
             };
 
             const scrollToItem = (id, type) => {
-                 const listElement = type === 'evrak' ? evrakListesiBody : hizliNotListesi;
-                 const itemElement = listElement.querySelector(`[data-id="${id}"]`);
-                 if (itemElement) {
-                     itemElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                     itemElement.classList.add('highlight');
-                     setTimeout(() => itemElement.classList.remove('highlight'), 1500); // Vurguyu kaldır
+                 // 1. Tab Switch Logic
+                 if (type === 'evrak') {
+                     if (!tabEvrak.classList.contains('active')) {
+                         tabEvrak.click();
+                     }
+                 } else if (type === 'not') {
+                     if (!tabNotlar.classList.contains('active')) {
+                         tabNotlar.click();
+                     }
                  }
+
+                 // Wait for tab switch / DOM update
+                 setTimeout(() => {
+                     const listElement = type === 'evrak' ? document.getElementById('evrakListesi') : document.getElementById('hizliNotListesi');
+                     let itemElement = listElement.querySelector(`[data-id="${id}"]`);
+                     
+                     if (!itemElement && type === 'evrak' && seciliKlasor !== 'all') {
+                         // If item is hidden by folder filter, reset filter
+                         document.querySelector('[data-klasor="all"]').click();
+                         // Retry finding element after filter reset
+                         setTimeout(() => {
+                              itemElement = listElement.querySelector(`[data-id="${id}"]`);
+                              if(itemElement) {
+                                  itemElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                  itemElement.classList.add('highlight');
+                                  setTimeout(() => itemElement.classList.remove('highlight'), 2000);
+                              }
+                         }, 100);
+                         return;
+                     }
+
+                     if (itemElement) {
+                         itemElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                         itemElement.classList.add('highlight');
+                         setTimeout(() => itemElement.classList.remove('highlight'), 2000); 
+                     }
+                 }, 100);
             };
 
             // Dark Mode Toggle
@@ -772,9 +804,19 @@
             closeModalBtn.addEventListener('click', hideModal); modalBackdrop.addEventListener('click', hideModal);
             closeNoteModalBtn.addEventListener('click', hideNoteModal); noteModalBackdrop.addEventListener('click', hideNoteModal);
             
-            // Kartlardaki öğelere tıklama
-            bekleyenIslemlerListesi.addEventListener('click', (e) => { if(e.target.tagName === 'LI' && e.target.dataset.id) { scrollToItem(e.target.dataset.id, e.target.dataset.type); } });
-            bekleyenUyarılarListesi.addEventListener('click', (e) => { if(e.target.tagName === 'LI' && e.target.dataset.id) { scrollToItem(e.target.dataset.id, e.target.dataset.type); } });
+            // Kartlardaki öğelere tıklama (İyileştirilmiş)
+            bekleyenIslemlerListesi.addEventListener('click', (e) => { 
+                const target = e.target.closest('li');
+                if(target && target.dataset.id) { 
+                    scrollToItem(target.dataset.id, target.dataset.type); 
+                } 
+            });
+            bekleyenUyarılarListesi.addEventListener('click', (e) => { 
+                const target = e.target.closest('li');
+                if(target && target.dataset.id) { 
+                    scrollToItem(target.dataset.id, target.dataset.type); 
+                } 
+            });
             
             // Yeni Butonlar
             darkModeToggle.addEventListener('click', toggleDarkMode);
