@@ -11,18 +11,31 @@
     <script async src="https://docs.opencv.org/4.5.2/opencv.js" onload="onOpenCvReady();"></script>
 
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Tailwind Konfigürasyonu (Dark Mode için) -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+        }
+    </script>
     <style>
-        body { font-family: 'Inter', sans-serif; }
+        body { font-family: 'Inter', sans-serif; transition: background-color 0.3s, color 0.3s; }
         ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: #f1f1f1; }
         ::-webkit-scrollbar-thumb { background: #888; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #555; }
+        
+        /* Dark Mode Scrollbar */
+        .dark ::-webkit-scrollbar-track { background: #2d3748; }
+        .dark ::-webkit-scrollbar-thumb { background: #4a5568; }
+
         .modal-backdrop { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 40; }
         .modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 50; }
         #loader { display: none; position: fixed; top: 0; left: 0; width: 100%; padding: 8px; background-color: #3b82f6; color: white; text-align: center; z-index: 1000; font-weight: 500; }
         .klasor-item.active { background-color: #3b82f6; color: white; }
         .tab-button { cursor: pointer; padding: 10px 20px; border-bottom: 3px solid transparent; }
         .tab-button.active { border-bottom-color: #3b82f6; color: #3b82f6; font-weight: 600; }
+        
+        /* Scanner Styles */
         #scannerModal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: #000; z-index: 900; display: none; flex-direction: column; justify-content: center; align-items: center; overflow: hidden; }
         #videoFeed { max-width: 100%; max-height: 100%; object-fit: contain; }
         #cropCanvas, #canvasOutput { max-width: 100%; max-height: 85vh; object-fit: contain; cursor: grab; }
@@ -33,45 +46,83 @@
         #magnifier::before, #magnifier::after { content: ''; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); background: #00f; }
         #magnifier::before { width: 30px; height: 2px; }
         #magnifier::after { width: 2px; height: 30px; }
+        
         .alert-blink { animation: blink 1.2s linear infinite; }
         @keyframes blink { 50% { opacity: 0.2; } }
         .highlight { background-color: #fef9c3; transition: background-color 0.5s ease-out; }
-        .task-card ul { max-height: 150px; overflow-y: auto; } /* Kart listeleri için kaydırma */
+        .task-card ul { max-height: 150px; overflow-y: auto; }
+        
+        /* Toast Notification */
+        #toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 2000; display: flex; flex-direction: column; gap: 10px; }
+        .toast { padding: 12px 20px; border-radius: 8px; color: white; font-weight: 500; shadow: 0 4px 6px rgba(0,0,0,0.1); animation: slideIn 0.3s ease-out; max-width: 300px; }
+        .toast.success { background-color: #10b981; }
+        .toast.error { background-color: #ef4444; }
+        .toast.info { background-color: #3b82f6; }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
     </style>
 </head>
-<body class="bg-gray-100 text-gray-800">
+<body class="bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-100 transition-colors duration-200">
 
     <div id="loader">İşlem yapılıyor, lütfen bekleyin...</div>
+    <div id="toast-container"></div>
 
     <div class="container mx-auto p-4 md:p-8">
-        <header class="mb-4">
-            <h1 class="text-3xl font-bold text-gray-700">Evrak & Not Takip Sistemi</h1>
-            <p class="text-gray-500">Gelen evraklarınızı ve notlarınızı yönetin.</p>
+        <header class="mb-6 flex justify-between items-center">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-700 dark:text-white">Evrak Yönetim Paneli</h1>
+                <p class="text-gray-500 dark:text-gray-400">Dijital Arşiv ve Not Takip Sistemi</p>
+            </div>
+            <button id="darkModeToggle" class="p-2 rounded-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+                <!-- Sun Icon -->
+                <svg id="sunIcon" class="w-6 h-6 text-yellow-500 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                <!-- Moon Icon -->
+                <svg id="moonIcon" class="w-6 h-6 text-gray-700 dark:text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+            </button>
         </header>
+
+        <!-- İstatistik Paneli (Dashboard) -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow border-l-4 border-blue-500">
+                <div class="text-gray-500 dark:text-gray-400 text-xs uppercase font-bold">Toplam Evrak</div>
+                <div class="text-2xl font-bold text-gray-700 dark:text-white" id="statTotal">0</div>
+            </div>
+            <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow border-l-4 border-yellow-500">
+                <div class="text-gray-500 dark:text-gray-400 text-xs uppercase font-bold">Bekleyen İşler</div>
+                <div class="text-2xl font-bold text-gray-700 dark:text-white" id="statPending">0</div>
+            </div>
+            <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow border-l-4 border-green-500">
+                <div class="text-gray-500 dark:text-gray-400 text-xs uppercase font-bold">Tamamlanan</div>
+                <div class="text-2xl font-bold text-gray-700 dark:text-white" id="statCompleted">0</div>
+            </div>
+            <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow border-l-4 border-purple-500">
+                <div class="text-gray-500 dark:text-gray-400 text-xs uppercase font-bold">Toplam Not</div>
+                <div class="text-2xl font-bold text-gray-700 dark:text-white" id="statNotes">0</div>
+            </div>
+        </div>
 
         <!-- Uyarı Kartları -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-            <div class="bg-white p-4 rounded-lg shadow-md border border-orange-200 task-card">
-                <h3 class="text-lg font-semibold mb-2 text-orange-700 flex items-center">
+            <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md border border-orange-200 dark:border-orange-900 task-card">
+                <h3 class="text-lg font-semibold mb-2 text-orange-700 dark:text-orange-400 flex items-center">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.414-1.414L11 10.586V6z" clip-rule="evenodd" /></svg>
                     Yaklaşan / Geçen İşlemler
                 </h3>
-                <ul id="bekleyenIslemlerListesi" class="text-sm space-y-1"></ul>
+                <ul id="bekleyenIslemlerListesi" class="text-sm space-y-1 dark:text-gray-300"></ul>
             </div>
-            <div class="bg-white p-4 rounded-lg shadow-md border border-red-200 task-card">
-                <h3 class="text-lg font-semibold mb-2 text-red-700 flex items-center">
+            <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md border border-red-200 dark:border-red-900 task-card">
+                <h3 class="text-lg font-semibold mb-2 text-red-700 dark:text-red-400 flex items-center">
                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1.332A6.993 6.993 0 0116.991 9H17a1 1 0 110 2h-.009A6.994 6.994 0 0111 16.668V18a1 1 0 11-2 0v-1.332A6.994 6.994 0 013.009 11H3a1 1 0 110-2h.009A6.993 6.993 0 019 4.332V3a1 1 0 011-1zm4.075 8.75a1 1 0 00-1.414-1.414L10 11.93l-2.661-2.595a1 1 0 00-1.415 1.415l3.333 3.25a1 1 0 001.415 0l3.333-3.25z" clip-rule="evenodd" /></svg>
                     Aktif Uyarılar
                 </h3>
-                <ul id="bekleyenUyarılarListesi" class="text-sm space-y-1"></ul>
+                <ul id="bekleyenUyarılarListesi" class="text-sm space-y-1 dark:text-gray-300"></ul>
             </div>
         </div>
         
         <!-- Sekme Menüsü -->
-        <div class="mb-8 border-b border-gray-200">
+        <div class="mb-8 border-b border-gray-200 dark:border-gray-700">
             <nav class="flex space-x-4" aria-label="Tabs">
-                <button id="tabEvrak" class="tab-button active">Evrak Takip</button>
-                <button id="tabNotlar" class="tab-button">Hızlı Notlar</button>
+                <button id="tabEvrak" class="tab-button active dark:text-gray-200">Evrak Takip</button>
+                <button id="tabNotlar" class="tab-button dark:text-gray-400">Hızlı Notlar</button>
             </nav>
         </div>
 
@@ -79,36 +130,45 @@
         <div id="evrakTabContent">
             <main class="grid grid-cols-1 lg:grid-cols-4 gap-8">
                 <!-- Sol Taraf: Evrak Formu -->
-                <div class="lg:col-span-1 bg-white p-6 rounded-lg shadow-md h-fit">
-                    <h2 id="formBasligi" class="text-xl font-semibold mb-4 border-b pb-2">Yeni Evrak Ekle</h2>
+                <div class="lg:col-span-1 bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md h-fit transition-colors">
+                    <h2 id="formBasligi" class="text-xl font-semibold mb-4 border-b dark:border-gray-700 pb-2 dark:text-white">Yeni Evrak Ekle</h2>
                     <form id="evrakFormu" class="space-y-4">
                         <div id="dosyaGirisContainer" class="grid grid-cols-2 gap-2">
                              <div>
-                                <label for="pdfDosya" class="block text-sm font-medium text-gray-600 mb-1">PDF Dosyası Seç</label>
-                                <input type="file" id="pdfDosya" name="pdfDosya" accept=".pdf" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                                <label for="pdfDosya" class="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">PDF Dosyası Seç</label>
+                                <input type="file" id="pdfDosya" name="pdfDosya" accept=".pdf" class="block w-full text-sm text-gray-500 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-gray-700 dark:file:text-gray-300">
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-600 mb-1">Mobil Cihazdan Tara</label>
-                                <button type="button" id="scanBtn" disabled class="w-full bg-indigo-600 text-white font-bold py-2 px-4 rounded-md hover:bg-indigo-700 disabled:bg-gray-400">Mobil Belge Tara</button>
+                                <label class="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Mobil Cihazdan Tara</label>
+                                <button type="button" id="scanBtn" disabled class="w-full bg-indigo-600 text-white font-bold py-2 px-4 rounded-md hover:bg-indigo-700 disabled:bg-gray-400 dark:disabled:bg-gray-600">Mobil Tara</button>
                             </div>
                         </div>
-                        <div><label for="klasor" class="block text-sm font-medium text-gray-600">Klasör Adı</label><input type="text" id="klasor" name="klasor" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm" placeholder="Örn: İmar Planları"></div>
-                        <div><label for="konu" class="block text-sm font-medium text-gray-600">Konu / Başlık</label><input type="text" id="konu" name="konu" class="mt-1 block w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-md shadow-sm"></div>
-                        <div><label for="gelisTarihi" class="block text-sm font-medium text-gray-600">Geliş Tarihi</label><input type="date" id="gelisTarihi" name="gelisTarihi" class="mt-1 block w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-md shadow-sm"></div>
-                        <div><label for="evrakSayisi" class="block text-sm font-medium text-gray-600">Evrak Sayısı</label><input type="text" id="evrakSayisi" name="evrakSayisi" class="mt-1 block w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-md shadow-sm"></div>
-                        <div><label for="sonCevapTarihi" class="block text-sm font-medium text-gray-600">Son Cevap Tarihi</label><input type="date" id="sonCevapTarihi" name="sonCevapTarihi" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm"></div>
-                        <div><label for="durum" class="block text-sm font-medium text-gray-600">Durum</label><select id="durum" name="durum" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm"><option value="Bekliyor">Bekliyor</option><option value="İşlemde">İşlemde</option><option value="Cevaplandı">Cevaplandı</option><option value="İşleme Gerek Yok">İşleme Gerek Yok</option></select></div>
-                        <div><label for="notlar" class="block text-sm font-medium text-gray-600">Notlar</label><textarea id="notlar" name="notlar" rows="3" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm"></textarea></div>
-                        <div><label for="uyariTarihi" class="block text-sm font-medium text-gray-600">Uyarı Tarihi (Belirli bir gün)</label><input type="date" id="uyariTarihi" name="uyariTarihi" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm"></div>
-                        <div><label for="uyariGunu" class="block text-sm font-medium text-gray-600">Tekrarlanan Uyarı Günü (Her Ayın)</label><input type="number" id="uyariGunu" name="uyariGunu" min="1" max="31" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm" placeholder="Örn: 15"></div>
-                        <div class="flex space-x-2"><button type="submit" id="kaydetBtn" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-md hover:bg-blue-700">Evrakı Kaydet</button><button type="button" id="iptalBtn" class="w-full bg-gray-200 text-gray-700 font-bold py-2 px-4 rounded-md hover:bg-gray-300 hidden">İptal</button></div>
+                        <div><label for="klasor" class="block text-sm font-medium text-gray-600 dark:text-gray-300">Klasör Adı</label><input type="text" id="klasor" name="klasor" class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 dark:text-white border border-gray-300 dark:border-gray-600 rounded-md shadow-sm" placeholder="Örn: İmar Planları"></div>
+                        <div><label for="konu" class="block text-sm font-medium text-gray-600 dark:text-gray-300">Konu / Başlık</label><input type="text" id="konu" name="konu" class="mt-1 block w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 dark:text-white border border-gray-300 dark:border-gray-600 rounded-md shadow-sm"></div>
+                        <div><label for="gelisTarihi" class="block text-sm font-medium text-gray-600 dark:text-gray-300">Geliş Tarihi</label><input type="date" id="gelisTarihi" name="gelisTarihi" class="mt-1 block w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 dark:text-white border border-gray-300 dark:border-gray-600 rounded-md shadow-sm"></div>
+                        <div><label for="evrakSayisi" class="block text-sm font-medium text-gray-600 dark:text-gray-300">Evrak Sayısı</label><input type="text" id="evrakSayisi" name="evrakSayisi" class="mt-1 block w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 dark:text-white border border-gray-300 dark:border-gray-600 rounded-md shadow-sm"></div>
+                        <div><label for="sonCevapTarihi" class="block text-sm font-medium text-gray-600 dark:text-gray-300">Son Cevap Tarihi</label><input type="date" id="sonCevapTarihi" name="sonCevapTarihi" class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 dark:text-white border border-gray-300 dark:border-gray-600 rounded-md shadow-sm"></div>
+                        <div><label for="durum" class="block text-sm font-medium text-gray-600 dark:text-gray-300">Durum</label><select id="durum" name="durum" class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 dark:text-white border border-gray-300 dark:border-gray-600 rounded-md shadow-sm"><option value="Bekliyor">Bekliyor</option><option value="İşlemde">İşlemde</option><option value="Cevaplandı">Cevaplandı</option><option value="İşleme Gerek Yok">İşleme Gerek Yok</option></select></div>
+                        <div><label for="notlar" class="block text-sm font-medium text-gray-600 dark:text-gray-300">Notlar</label><textarea id="notlar" name="notlar" rows="3" class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 dark:text-white border border-gray-300 dark:border-gray-600 rounded-md shadow-sm"></textarea></div>
+                        <div><label for="uyariTarihi" class="block text-sm font-medium text-gray-600 dark:text-gray-300">Uyarı Tarihi (Belirli bir gün)</label><input type="date" id="uyariTarihi" name="uyariTarihi" class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 dark:text-white border border-gray-300 dark:border-gray-600 rounded-md shadow-sm"></div>
+                        <div><label for="uyariGunu" class="block text-sm font-medium text-gray-600 dark:text-gray-300">Tekrarlanan Uyarı Günü</label><input type="number" id="uyariGunu" name="uyariGunu" min="1" max="31" class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 dark:text-white border border-gray-300 dark:border-gray-600 rounded-md shadow-sm" placeholder="Örn: 15"></div>
+                        <div class="flex space-x-2"><button type="submit" id="kaydetBtn" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-md hover:bg-blue-700 shadow">Kaydet</button><button type="button" id="iptalBtn" class="w-full bg-gray-200 text-gray-700 font-bold py-2 px-4 rounded-md hover:bg-gray-300 hidden dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600">İptal</button></div>
                     </form>
                 </div>
                 <!-- Sağ Taraf: Evrak Listesi -->
-                <div class="lg:col-span-3 bg-white p-6 rounded-lg shadow-md">
-                    <div class="flex justify-between items-center mb-4 border-b pb-2"><h2 class="text-xl font-semibold">Kayıtlı Evraklar</h2><input type="text" id="arama" placeholder="Konu veya evrak sayısına göre ara..." class="px-3 py-2 border border-gray-300 rounded-md shadow-sm"></div>
-                    <div class="mb-4"><h3 class="text-lg font-semibold mb-2 text-gray-600">Dosya Klasörleri</h3><div id="klasorListesi" class="flex flex-wrap gap-2"></div></div>
-                    <div class="overflow-x-auto"><table class="w-full divide-y divide-gray-200 table-fixed"><thead class="bg-gray-50"><tr><th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-2/5">Konu</th><th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/5">Evrak Sayısı</th><th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Geliş Tarihi</th><th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Son Cevap Tarihi</th><th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Durum</th><th scope="col" class="relative px-6 py-3"><span class="sr-only">İşlemler</span></th></tr></thead><tbody id="evrakListesi" class="bg-white divide-y divide-gray-200"></tbody></table></div>
+                <div class="lg:col-span-3 bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md transition-colors">
+                    <div class="flex flex-col md:flex-row justify-between items-center mb-4 border-b dark:border-gray-700 pb-2 gap-4">
+                        <h2 class="text-xl font-semibold dark:text-white">Kayıtlı Evraklar</h2>
+                        <div class="flex gap-2 w-full md:w-auto">
+                             <input type="text" id="arama" placeholder="Konu veya evrak no ara..." class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm dark:bg-gray-700 dark:text-white">
+                             <button id="excelExportBtn" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow flex items-center text-sm" title="Excel Olarak İndir">
+                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                                 Excel
+                             </button>
+                        </div>
+                    </div>
+                    <div class="mb-4"><h3 class="text-lg font-semibold mb-2 text-gray-600 dark:text-gray-400">Klasörler</h3><div id="klasorListesi" class="flex flex-wrap gap-2"></div></div>
+                    <div class="overflow-x-auto"><table id="evrakTablosu" class="w-full divide-y divide-gray-200 dark:divide-gray-700 table-fixed"><thead class="bg-gray-50 dark:bg-gray-700"><tr><th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-2/5">Konu</th><th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-1/5">Evrak Sayısı</th><th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Geliş Tarihi</th><th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Son Cevap</th><th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Durum</th><th scope="col" class="relative px-6 py-3"><span class="sr-only">İşlemler</span></th></tr></thead><tbody id="evrakListesi" class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700"></tbody></table></div>
                 </div>
             </main>
         </div>
@@ -117,19 +177,19 @@
         <div id="notlarTabContent" class="hidden">
             <main class="grid grid-cols-1 lg:grid-cols-4 gap-8">
                 <!-- Sol Taraf: Not Formu -->
-                <div class="lg:col-span-1 bg-white p-6 rounded-lg shadow-md h-fit">
-                    <h2 id="notFormBasligi" class="text-xl font-semibold mb-4 border-b pb-2">Yeni Not Ekle</h2>
+                <div class="lg:col-span-1 bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md h-fit">
+                    <h2 id="notFormBasligi" class="text-xl font-semibold mb-4 border-b dark:border-gray-700 pb-2 dark:text-white">Yeni Not Ekle</h2>
                     <form id="hizliNotFormu" class="space-y-4">
-                        <div><label for="notBaslik" class="block text-sm font-medium text-gray-600">Not Başlığı</label><input type="text" id="notBaslik" name="notBaslik" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm" required></div>
-                        <div><label for="notIcerik" class="block text-sm font-medium text-gray-600">Not İçeriği</label><textarea id="notIcerik" name="notIcerik" rows="5" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm"></textarea></div>
-                        <div><label for="notUyariTarihi" class="block text-sm font-medium text-gray-600">Uyarı Tarihi (Belirli bir gün)</label><input type="date" id="notUyariTarihi" name="notUyariTarihi" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm"></div>
-                        <div><label for="notUyariGunu" class="block text-sm font-medium text-gray-600">Tekrarlanan Uyarı Günü (Her Ayın)</label><input type="number" id="notUyariGunu" name="notUyariGunu" min="1" max="31" class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm" placeholder="Örn: 20"></div>
-                        <div class="flex space-x-2"><button type="submit" id="notKaydetBtn" class="w-full bg-green-600 text-white font-bold py-2 px-4 rounded-md hover:bg-green-700">Notu Kaydet</button><button type="button" id="notIptalBtn" class="w-full bg-gray-200 text-gray-700 font-bold py-2 px-4 rounded-md hover:bg-gray-300 hidden">İptal</button></div>
+                        <div><label for="notBaslik" class="block text-sm font-medium text-gray-600 dark:text-gray-300">Not Başlığı</label><input type="text" id="notBaslik" name="notBaslik" class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 dark:text-white border border-gray-300 dark:border-gray-600 rounded-md shadow-sm" required></div>
+                        <div><label for="notIcerik" class="block text-sm font-medium text-gray-600 dark:text-gray-300">Not İçeriği</label><textarea id="notIcerik" name="notIcerik" rows="5" class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 dark:text-white border border-gray-300 dark:border-gray-600 rounded-md shadow-sm"></textarea></div>
+                        <div><label for="notUyariTarihi" class="block text-sm font-medium text-gray-600 dark:text-gray-300">Uyarı Tarihi (Belirli bir gün)</label><input type="date" id="notUyariTarihi" name="notUyariTarihi" class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 dark:text-white border border-gray-300 dark:border-gray-600 rounded-md shadow-sm"></div>
+                        <div><label for="notUyariGunu" class="block text-sm font-medium text-gray-600 dark:text-gray-300">Tekrarlanan Uyarı Günü</label><input type="number" id="notUyariGunu" name="notUyariGunu" min="1" max="31" class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 dark:text-white border border-gray-300 dark:border-gray-600 rounded-md shadow-sm" placeholder="Örn: 20"></div>
+                        <div class="flex space-x-2"><button type="submit" id="notKaydetBtn" class="w-full bg-green-600 text-white font-bold py-2 px-4 rounded-md hover:bg-green-700 shadow">Kaydet</button><button type="button" id="notIptalBtn" class="w-full bg-gray-200 text-gray-700 font-bold py-2 px-4 rounded-md hover:bg-gray-300 hidden dark:bg-gray-700 dark:text-gray-300">İptal</button></div>
                     </form>
                 </div>
                 <!-- Sağ Taraf: Not Listesi -->
-                <div class="lg:col-span-3 bg-white p-6 rounded-lg shadow-md">
-                     <div class="flex justify-between items-center mb-4 border-b pb-2"><h2 class="text-xl font-semibold">Kayıtlı Notlar</h2><input type="text" id="notArama" placeholder="Notlarda ara..." class="px-3 py-2 border border-gray-300 rounded-md shadow-sm"></div>
+                <div class="lg:col-span-3 bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
+                     <div class="flex justify-between items-center mb-4 border-b dark:border-gray-700 pb-2"><h2 class="text-xl font-semibold dark:text-white">Kayıtlı Notlar</h2><input type="text" id="notArama" placeholder="Notlarda ara..." class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm dark:bg-gray-700 dark:text-white"></div>
                     <div id="hizliNotListesi" class="space-y-3"></div>
                 </div>
             </main>
@@ -138,8 +198,8 @@
     </div>
     
     <!-- Modallar -->
-    <div id="pdfModalBackdrop" class="modal-backdrop"></div><div id="pdfModal" class="modal bg-white rounded-lg shadow-xl w-11/12 md:w-3/4 lg:w-2/3" style="max-height: 90vh; height: 90vh;"><div class="p-4 border-b flex justify-between items-center"><h3 id="modalTitle" class="text-lg font-semibold">PDF Görüntüleyici</h3><button id="closeModal" class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button></div><div class="overflow-auto h-full p-2"><iframe id="pdfFrame" class="w-full" style="height: calc(100% - 10px); border: none;"></iframe></div></div>
-    <div id="noteModalBackdrop" class="modal-backdrop"></div><div id="noteModal" class="modal bg-white rounded-lg shadow-xl w-11/12 md:w-1/2 lg:w-1/3"><div class="p-4 border-b flex justify-between items-center"><h3 id="noteModalTitle" class="text-lg font-semibold">Evrak Notu</h3><button id="closeNoteModal" class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button></div><div id="noteContentView" class="p-6 whitespace-pre-wrap text-gray-700"></div></div>
+    <div id="pdfModalBackdrop" class="modal-backdrop"></div><div id="pdfModal" class="modal bg-white dark:bg-gray-800 rounded-lg shadow-xl w-11/12 md:w-3/4 lg:w-2/3" style="max-height: 90vh; height: 90vh;"><div class="p-4 border-b dark:border-gray-700 flex justify-between items-center"><h3 id="modalTitle" class="text-lg font-semibold dark:text-white">PDF Görüntüleyici</h3><button id="closeModal" class="text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white text-2xl font-bold">&times;</button></div><div class="overflow-auto h-full p-2"><iframe id="pdfFrame" class="w-full" style="height: calc(100% - 10px); border: none;"></iframe></div></div>
+    <div id="noteModalBackdrop" class="modal-backdrop"></div><div id="noteModal" class="modal bg-white dark:bg-gray-800 rounded-lg shadow-xl w-11/12 md:w-1/2 lg:w-1/3"><div class="p-4 border-b dark:border-gray-700 flex justify-between items-center"><h3 id="noteModalTitle" class="text-lg font-semibold dark:text-white">Evrak Notu</h3><button id="closeNoteModal" class="text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white text-2xl font-bold">&times;</button></div><div id="noteContentView" class="p-6 whitespace-pre-wrap text-gray-700 dark:text-gray-300"></div></div>
     <div id="scannerModal"><video id="videoFeed" playsinline></video><canvas id="cropCanvas" class="hidden"></canvas><canvas id="canvasOutput" class="hidden"></canvas><div id="magnifier"></div><div id="scannerControls"><button id="retryScanBtn" class="bg-yellow-500 text-white font-bold py-2 px-4 rounded-md hidden">Tekrar Çek</button><div id="captureBtn" class="scanner-button"><div class="scanner-inner-button"></div></div><button id="cropBtn" class="bg-blue-500 text-white font-bold py-2 px-4 rounded-md hidden">Onayla</button><button id="confirmScanBtn" class="bg-green-500 text-white font-bold py-2 px-4 rounded-md hidden">Kaydet</button></div><button id="closeScannerBtn" class="absolute top-5 right-5 text-white text-3xl font-bold">&times;</button></div>
 
     <script>
@@ -204,6 +264,16 @@
             const magnifier = document.getElementById('magnifier');
             const bekleyenIslemlerListesi = document.getElementById('bekleyenIslemlerListesi');
             const bekleyenUyarılarListesi = document.getElementById('bekleyenUyarılarListesi');
+            const darkModeToggle = document.getElementById('darkModeToggle');
+            const sunIcon = document.getElementById('sunIcon');
+            const moonIcon = document.getElementById('moonIcon');
+            const excelExportBtn = document.getElementById('excelExportBtn');
+            const toastContainer = document.getElementById('toast-container');
+            const statTotal = document.getElementById('statTotal');
+            const statPending = document.getElementById('statPending');
+            const statCompleted = document.getElementById('statCompleted');
+            const statNotes = document.getElementById('statNotes');
+
 
             // --- GitHub API Ayarları ---
             const p1 = 'ghp_2KS6iY7t1ka6bKyH';
@@ -228,8 +298,33 @@
             const utf8_to_b64 = (str) => btoa(unescape(encodeURIComponent(str)));
             const b64_to_utf8 = (str) => decodeURIComponent(escape(atob(str)));
 
+            const showToast = (message, type = 'info') => {
+                const toast = document.createElement('div');
+                toast.className = `toast ${type}`;
+                toast.textContent = message;
+                toastContainer.appendChild(toast);
+                setTimeout(() => {
+                    toast.style.opacity = '0';
+                    toast.style.transform = 'translateX(100%)';
+                    toast.style.transition = 'all 0.3s ease-out';
+                    setTimeout(() => toast.remove(), 300);
+                }, 3000);
+            };
+
+            const updateStats = () => {
+                const total = evraklar.length;
+                const pending = evraklar.filter(e => e.durum === 'Bekliyor' || e.durum === 'İşlemde').length;
+                const completed = evraklar.filter(e => e.durum === 'Cevaplandı').length;
+                const totalNotes = hizliNotlar.length;
+
+                statTotal.textContent = total;
+                statPending.textContent = pending;
+                statCompleted.textContent = completed;
+                statNotes.textContent = totalNotes;
+            };
+
             // --- Tarayıcı Fonksiyonları ---
-           const openScanner=async()=>{if(!cvIsReady){alert('Tarayıcı kütüphanesi henüz hazır değil.');return}try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1920},height:{ideal:1080}}});videoFeed.srcObject=stream;videoFeed.style.display='block';cropCanvas.style.display='none';canvasOutput.style.display='none';scannerModal.style.display='flex';captureBtn.style.display='flex';retryScanBtn.style.display='none';cropBtn.style.display='none';confirmScanBtn.style.display='none';videoFeed.play()}catch(err){alert("Kameraya erişilemedi. Lütfen izinleri kontrol edin.")}};const closeScanner=()=>{if(stream){stream.getTracks().forEach(track=>track.stop())}scannerModal.style.display='none'};const startCropping=()=>{capturedImage=document.createElement('canvas');capturedImage.width=videoFeed.videoWidth;capturedImage.height=videoFeed.videoHeight;capturedImage.getContext('2d').drawImage(videoFeed,0,0);videoFeed.style.display='none';cropCanvas.style.display='block';captureBtn.style.display='none';retryScanBtn.style.display='inline-block';cropBtn.style.display='inline-block';const margin=0.15;cornerPoints=[{x:capturedImage.width*margin,y:capturedImage.height*margin},{x:capturedImage.width*(1-margin),y:capturedImage.height*margin},{x:capturedImage.width*(1-margin),y:capturedImage.height*(1-margin)},{x:capturedImage.width*margin,y:capturedImage.height*(1-margin)},];cropCanvas.width=scannerModal.clientWidth;cropCanvas.height=scannerModal.clientHeight*0.85;drawCroppingUI()};const drawCroppingUI=()=>{const ctx=cropCanvas.getContext('2d');const canvasWidth=cropCanvas.width;const canvasHeight=cropCanvas.height;const imgRatio=capturedImage.width/capturedImage.height;const canvasRatio=canvasWidth/canvasHeight;let drawWidth,drawHeight,offsetX,offsetY;if(imgRatio>canvasRatio){drawWidth=canvasWidth;drawHeight=drawWidth/imgRatio;offsetX=0;offsetY=(canvasHeight-drawHeight)/2}else{drawHeight=canvasHeight;drawWidth=drawHeight*imgRatio;offsetY=0;offsetX=(canvasWidth-drawWidth)/2}ctx.clearRect(0,0,canvasWidth,canvasHeight);ctx.drawImage(capturedImage,offsetX,offsetY,drawWidth,drawHeight);ctx.strokeStyle='#00f';ctx.lineWidth=2;ctx.beginPath();const toCanvasPoint=p=>({x:(p.x/capturedImage.width)*drawWidth+offsetX,y:(p.y/capturedImage.height)*drawHeight+offsetY});const canvasPoints=cornerPoints.map(toCanvasPoint);ctx.moveTo(canvasPoints[0].x,canvasPoints[0].y);for(let i=1;i<canvasPoints.length;i++){ctx.lineTo(canvasPoints[i].x,canvasPoints[i].y)}ctx.closePath();ctx.stroke();ctx.fillStyle='#00f';canvasPoints.forEach(p=>{ctx.beginPath();ctx.arc(p.x,p.y,10,0,2*Math.PI);ctx.fill()})};const getTouchPos=(canvas,evt)=>{const rect=canvas.getBoundingClientRect();const touch=evt.touches[0];return{x:touch.clientX-rect.left,y:touch.clientY-rect.top}};const getMousePos=(canvas,evt)=>{const rect=canvas.getBoundingClientRect();return{x:evt.clientX-rect.left,y:evt.clientY-rect.top}};const handleDragStart=(pos)=>{const canvasPoints=cornerPoints.map(p=>{const imgRatio=capturedImage.width/capturedImage.height;const canvasRatio=cropCanvas.width/cropCanvas.height;let drawWidth,drawHeight,offsetX,offsetY;if(imgRatio>canvasRatio){drawWidth=cropCanvas.width;drawHeight=drawWidth/imgRatio;offsetX=0;offsetY=(cropCanvas.height-drawHeight)/2}else{drawHeight=cropCanvas.height;drawWidth=drawHeight*imgRatio;offsetY=0;offsetX=(cropCanvas.width-drawWidth)/2}return{x:(p.x/capturedImage.width)*drawWidth+offsetX,y:(p.y/capturedImage.height)*drawHeight+offsetY}});for(let i=0;i<canvasPoints.length;i++){const dist=Math.hypot(pos.x-canvasPoints[i].x,pos.y-canvasPoints[i].y);if(dist<20){draggingPointIndex=i;cropCanvas.style.cursor='grabbing';break}}};const handleDragMove=(pos)=>{if(draggingPointIndex===-1)return;const imgRatio=capturedImage.width/capturedImage.height;const canvasRatio=cropCanvas.width/cropCanvas.height;let drawWidth,drawHeight,offsetX,offsetY;if(imgRatio>canvasRatio){drawWidth=cropCanvas.width;drawHeight=drawWidth/imgRatio;offsetX=0;offsetY=(cropCanvas.height-drawHeight)/2}else{drawHeight=cropCanvas.height;drawWidth=drawHeight*imgRatio;offsetY=0;offsetX=(cropCanvas.width-drawWidth)/2}cornerPoints[draggingPointIndex]={x:((pos.x-offsetX)/drawWidth)*capturedImage.width,y:((pos.y-offsetY)/drawHeight)*capturedImage.height,};const magnifySize=120;magnifier.style.display='block';magnifier.style.left=`${pos.x-magnifySize/2}px`;magnifier.style.top=`${pos.y-magnifySize/2}px`;magnifier.style.background=`url(${capturedImage.toDataURL()})`;const bgPosX=-(cornerPoints[draggingPointIndex].x*2-magnifySize/2);const bgPosY=-(cornerPoints[draggingPointIndex].y*2-magnifySize/2);magnifier.style.backgroundPosition=`${bgPosX}px ${bgPosY}px`;magnifier.style.backgroundSize=`${capturedImage.width*2}px ${capturedImage.height*2}px`;drawCroppingUI()};const handleDragEnd=()=>{draggingPointIndex=-1;cropCanvas.style.cursor='grab';magnifier.style.display='none'};cropCanvas.addEventListener('mousedown',(e)=>handleDragStart(getMousePos(cropCanvas,e)));cropCanvas.addEventListener('mousemove',(e)=>handleDragMove(getMousePos(cropCanvas,e)));cropCanvas.addEventListener('mouseup',handleDragEnd);cropCanvas.addEventListener('mouseleave',handleDragEnd);cropCanvas.addEventListener('touchstart',(e)=>{e.preventDefault();handleDragStart(getTouchPos(cropCanvas,e))});cropCanvas.addEventListener('touchmove',(e)=>{e.preventDefault();handleDragMove(getTouchPos(cropCanvas,e))});cropCanvas.addEventListener('touchend',handleDragEnd);const applyCrop=()=>{let src=cv.imread(capturedImage);const sortedPoints=[...cornerPoints].sort((a,b)=>a.y-b.y);const topPoints=sortedPoints.slice(0,2).sort((a,b)=>a.x-b.x);const bottomPoints=sortedPoints.slice(2,4).sort((a,b)=>a.x-b.x);const[tl,tr,bl,br]=[topPoints[0],topPoints[1],bottomPoints[0],bottomPoints[1]];const widthA=Math.hypot(br.x-bl.x,br.y-bl.y);const widthB=Math.hypot(tr.x-tl.x,tr.y-tl.y);const maxWidth=Math.max(widthA,widthB);const heightA=Math.hypot(tr.x-br.x,tr.y-br.y);const heightB=Math.hypot(tl.x-bl.x,tl.y-bl.y);const maxHeight=Math.max(heightA,heightB);let dst=new cv.Mat();let dsize=new cv.Size(maxWidth,maxHeight);let srcTri=cv.matFromArray(4,1,cv.CV_32FC2,[tl.x,tl.y,tr.x,tr.y,bl.x,bl.y,br.x,br.y]);let dstTri=cv.matFromArray(4,1,cv.CV_32FC2,[0,0,maxWidth,0,0,maxHeight,maxWidth,maxHeight]);let M=cv.getPerspectiveTransform(srcTri,dstTri);cv.warpPerspective(src,dst,M,dsize,cv.INTER_LINEAR,cv.BORDER_CONSTANT,new cv.Scalar());cv.cvtColor(dst,dst,cv.COLOR_RGBA2GRAY);cv.adaptiveThreshold(dst,dst,255,cv.ADAPTIVE_THRESH_GAUSSIAN_C,cv.THRESH_BINARY,11,12);cv.imshow(canvasOutput,dst);cropCanvas.style.display='none';canvasOutput.style.display='block';cropBtn.style.display='none';confirmScanBtn.style.display='inline-block';src.delete();dst.delete();srcTri.delete();dstTri.delete();M.delete()};scanBtn.addEventListener('click',openScanner);closeScannerBtn.addEventListener('click',closeScanner);captureBtn.addEventListener('click',startCropping);retryScanBtn.addEventListener('click',()=>{videoFeed.style.display='block';cropCanvas.style.display='none';canvasOutput.style.display='none';captureBtn.style.display='flex';retryScanBtn.style.display='none';cropBtn.style.display='none';confirmScanBtn.style.display='none'});cropBtn.addEventListener('click',applyCrop);confirmScanBtn.addEventListener('click',()=>{const imageDataUrl=canvasOutput.toDataURL('image/jpeg',0.9);const doc=new jsPDF();const imgProps=doc.getImageProperties(imageDataUrl);const pdfWidth=doc.internal.pageSize.getWidth();const pdfHeight=(imgProps.height*pdfWidth)/imgProps.width;doc.addImage(imageDataUrl,'JPEG',0,0,pdfWidth,pdfHeight);seciliDosyaBase64=doc.output('datauristring');klasorInput.value='Mobil';konuInput.value='Taranan Belge - '+new Date().toLocaleString('tr-TR');gelisTarihiInput.value=new Date().toISOString().split('T')[0];closeScanner();alert('Belge tarandı ve forma eklendi. Kaydet butonuna basarak işlemi tamamlayın.')});
+           const openScanner=async()=>{if(!cvIsReady){showToast('Tarayıcı kütüphanesi henüz hazır değil.','error');return}try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1920},height:{ideal:1080}}});videoFeed.srcObject=stream;videoFeed.style.display='block';cropCanvas.style.display='none';canvasOutput.style.display='none';scannerModal.style.display='flex';captureBtn.style.display='flex';retryScanBtn.style.display='none';cropBtn.style.display='none';confirmScanBtn.style.display='none';videoFeed.play()}catch(err){showToast("Kameraya erişilemedi. Lütfen izinleri kontrol edin.",'error')}};const closeScanner=()=>{if(stream){stream.getTracks().forEach(track=>track.stop())}scannerModal.style.display='none'};const startCropping=()=>{capturedImage=document.createElement('canvas');capturedImage.width=videoFeed.videoWidth;capturedImage.height=videoFeed.videoHeight;capturedImage.getContext('2d').drawImage(videoFeed,0,0);videoFeed.style.display='none';cropCanvas.style.display='block';captureBtn.style.display='none';retryScanBtn.style.display='inline-block';cropBtn.style.display='inline-block';const margin=0.15;cornerPoints=[{x:capturedImage.width*margin,y:capturedImage.height*margin},{x:capturedImage.width*(1-margin),y:capturedImage.height*margin},{x:capturedImage.width*(1-margin),y:capturedImage.height*(1-margin)},{x:capturedImage.width*margin,y:capturedImage.height*(1-margin)},];cropCanvas.width=scannerModal.clientWidth;cropCanvas.height=scannerModal.clientHeight*0.85;drawCroppingUI()};const drawCroppingUI=()=>{const ctx=cropCanvas.getContext('2d');const canvasWidth=cropCanvas.width;const canvasHeight=cropCanvas.height;const imgRatio=capturedImage.width/capturedImage.height;const canvasRatio=canvasWidth/canvasHeight;let drawWidth,drawHeight,offsetX,offsetY;if(imgRatio>canvasRatio){drawWidth=canvasWidth;drawHeight=drawWidth/imgRatio;offsetX=0;offsetY=(canvasHeight-drawHeight)/2}else{drawHeight=canvasHeight;drawWidth=drawHeight*imgRatio;offsetY=0;offsetX=(canvasWidth-drawWidth)/2}ctx.clearRect(0,0,canvasWidth,canvasHeight);ctx.drawImage(capturedImage,offsetX,offsetY,drawWidth,drawHeight);ctx.strokeStyle='#00f';ctx.lineWidth=2;ctx.beginPath();const toCanvasPoint=p=>({x:(p.x/capturedImage.width)*drawWidth+offsetX,y:(p.y/capturedImage.height)*drawHeight+offsetY});const canvasPoints=cornerPoints.map(toCanvasPoint);ctx.moveTo(canvasPoints[0].x,canvasPoints[0].y);for(let i=1;i<canvasPoints.length;i++){ctx.lineTo(canvasPoints[i].x,canvasPoints[i].y)}ctx.closePath();ctx.stroke();ctx.fillStyle='#00f';canvasPoints.forEach(p=>{ctx.beginPath();ctx.arc(p.x,p.y,10,0,2*Math.PI);ctx.fill()})};const getTouchPos=(canvas,evt)=>{const rect=canvas.getBoundingClientRect();const touch=evt.touches[0];return{x:touch.clientX-rect.left,y:touch.clientY-rect.top}};const getMousePos=(canvas,evt)=>{const rect=canvas.getBoundingClientRect();return{x:evt.clientX-rect.left,y:evt.clientY-rect.top}};const handleDragStart=(pos)=>{const canvasPoints=cornerPoints.map(p=>{const imgRatio=capturedImage.width/capturedImage.height;const canvasRatio=cropCanvas.width/cropCanvas.height;let drawWidth,drawHeight,offsetX,offsetY;if(imgRatio>canvasRatio){drawWidth=cropCanvas.width;drawHeight=drawWidth/imgRatio;offsetX=0;offsetY=(cropCanvas.height-drawHeight)/2}else{drawHeight=cropCanvas.height;drawWidth=drawHeight*imgRatio;offsetY=0;offsetX=(cropCanvas.width-drawWidth)/2}return{x:(p.x/capturedImage.width)*drawWidth+offsetX,y:(p.y/capturedImage.height)*drawHeight+offsetY}});for(let i=0;i<canvasPoints.length;i++){const dist=Math.hypot(pos.x-canvasPoints[i].x,pos.y-canvasPoints[i].y);if(dist<20){draggingPointIndex=i;cropCanvas.style.cursor='grabbing';break}}};const handleDragMove=(pos)=>{if(draggingPointIndex===-1)return;const imgRatio=capturedImage.width/capturedImage.height;const canvasRatio=cropCanvas.width/cropCanvas.height;let drawWidth,drawHeight,offsetX,offsetY;if(imgRatio>canvasRatio){drawWidth=cropCanvas.width;drawHeight=drawWidth/imgRatio;offsetX=0;offsetY=(cropCanvas.height-drawHeight)/2}else{drawHeight=cropCanvas.height;drawWidth=drawHeight*imgRatio;offsetY=0;offsetX=(cropCanvas.width-drawWidth)/2}cornerPoints[draggingPointIndex]={x:((pos.x-offsetX)/drawWidth)*capturedImage.width,y:((pos.y-offsetY)/drawHeight)*capturedImage.height,};const magnifySize=120;magnifier.style.display='block';magnifier.style.left=`${pos.x-magnifySize/2}px`;magnifier.style.top=`${pos.y-magnifySize/2}px`;magnifier.style.background=`url(${capturedImage.toDataURL()})`;const bgPosX=-(cornerPoints[draggingPointIndex].x*2-magnifySize/2);const bgPosY=-(cornerPoints[draggingPointIndex].y*2-magnifySize/2);magnifier.style.backgroundPosition=`${bgPosX}px ${bgPosY}px`;magnifier.style.backgroundSize=`${capturedImage.width*2}px ${capturedImage.height*2}px`;drawCroppingUI()};const handleDragEnd=()=>{draggingPointIndex=-1;cropCanvas.style.cursor='grab';magnifier.style.display='none'};cropCanvas.addEventListener('mousedown',(e)=>handleDragStart(getMousePos(cropCanvas,e)));cropCanvas.addEventListener('mousemove',(e)=>handleDragMove(getMousePos(cropCanvas,e)));cropCanvas.addEventListener('mouseup',handleDragEnd);cropCanvas.addEventListener('mouseleave',handleDragEnd);cropCanvas.addEventListener('touchstart',(e)=>{e.preventDefault();handleDragStart(getTouchPos(cropCanvas,e))});cropCanvas.addEventListener('touchmove',(e)=>{e.preventDefault();handleDragMove(getTouchPos(cropCanvas,e))});cropCanvas.addEventListener('touchend',handleDragEnd);const applyCrop=()=>{let src=cv.imread(capturedImage);const sortedPoints=[...cornerPoints].sort((a,b)=>a.y-b.y);const topPoints=sortedPoints.slice(0,2).sort((a,b)=>a.x-b.x);const bottomPoints=sortedPoints.slice(2,4).sort((a,b)=>a.x-b.x);const[tl,tr,bl,br]=[topPoints[0],topPoints[1],bottomPoints[0],bottomPoints[1]];const widthA=Math.hypot(br.x-bl.x,br.y-bl.y);const widthB=Math.hypot(tr.x-tl.x,tr.y-tl.y);const maxWidth=Math.max(widthA,widthB);const heightA=Math.hypot(tr.x-br.x,tr.y-br.y);const heightB=Math.hypot(tl.x-bl.x,tl.y-bl.y);const maxHeight=Math.max(heightA,heightB);let dst=new cv.Mat();let dsize=new cv.Size(maxWidth,maxHeight);let srcTri=cv.matFromArray(4,1,cv.CV_32FC2,[tl.x,tl.y,tr.x,tr.y,bl.x,bl.y,br.x,br.y]);let dstTri=cv.matFromArray(4,1,cv.CV_32FC2,[0,0,maxWidth,0,0,maxHeight,maxWidth,maxHeight]);let M=cv.getPerspectiveTransform(srcTri,dstTri);cv.warpPerspective(src,dst,M,dsize,cv.INTER_LINEAR,cv.BORDER_CONSTANT,new cv.Scalar());cv.cvtColor(dst,dst,cv.COLOR_RGBA2GRAY);cv.adaptiveThreshold(dst,dst,255,cv.ADAPTIVE_THRESH_GAUSSIAN_C,cv.THRESH_BINARY,11,12);cv.imshow(canvasOutput,dst);cropCanvas.style.display='none';canvasOutput.style.display='block';cropBtn.style.display='none';confirmScanBtn.style.display='inline-block';src.delete();dst.delete();srcTri.delete();dstTri.delete();M.delete()};scanBtn.addEventListener('click',openScanner);closeScannerBtn.addEventListener('click',closeScanner);captureBtn.addEventListener('click',startCropping);retryScanBtn.addEventListener('click',()=>{videoFeed.style.display='block';cropCanvas.style.display='none';canvasOutput.style.display='none';captureBtn.style.display='flex';retryScanBtn.style.display='none';cropBtn.style.display='none';confirmScanBtn.style.display='none'});cropBtn.addEventListener('click',applyCrop);confirmScanBtn.addEventListener('click',()=>{const imageDataUrl=canvasOutput.toDataURL('image/jpeg',0.9);const doc=new jsPDF();const imgProps=doc.getImageProperties(imageDataUrl);const pdfWidth=doc.internal.pageSize.getWidth();const pdfHeight=(imgProps.height*pdfWidth)/imgProps.width;doc.addImage(imageDataUrl,'JPEG',0,0,pdfWidth,pdfHeight);seciliDosyaBase64=doc.output('datauristring');klasorInput.value='Mobil';konuInput.value='Taranan Belge - '+new Date().toLocaleString('tr-TR');gelisTarihiInput.value=new Date().toISOString().split('T')[0];closeScanner();showToast('Belge tarandı.','success')});
             
             // --- GitHub API Fonksiyonları ---
             const githubApiCall = async (url, options = {}) => {
@@ -282,7 +377,7 @@
                     renderAll();
                 } catch (error) {
                     console.error("Veri yükleme hatası:", error);
-                    alert("Veriler GitHub'dan yüklenirken bir hata oluştu. Lütfen sayfayı yenileyin.");
+                    showToast("Veriler yüklenirken hata oluştu.", 'error');
                 } finally {
                     hideLoader();
                 }
@@ -310,21 +405,21 @@
 
 
             // --- Ana Fonksiyonlar ---
-            const formuTemizle = () => { evrakFormu.reset(); seciliDosyaBase64 = null; editingEvrakId = null; formBasligi.textContent = 'Yeni Evrak Ekle'; kaydetBtn.textContent = 'Evrakı Kaydet'; iptalBtn.classList.add('hidden'); dosyaGirisContainer.classList.remove('hidden'); pdfDosyaInput.required = true; };
-            const notFormuTemizle = () => { hizliNotFormu.reset(); editingNotId = null; notFormBasligi.textContent = 'Yeni Not Ekle'; notKaydetBtn.textContent = 'Notu Kaydet'; notIptalBtn.classList.add('hidden'); };
+            const formuTemizle = () => { evrakFormu.reset(); seciliDosyaBase64 = null; editingEvrakId = null; formBasligi.textContent = 'Yeni Evrak Ekle'; kaydetBtn.textContent = 'Kaydet'; iptalBtn.classList.add('hidden'); dosyaGirisContainer.classList.remove('hidden'); pdfDosyaInput.required = true; };
+            const notFormuTemizle = () => { hizliNotFormu.reset(); editingNotId = null; notFormBasligi.textContent = 'Yeni Not Ekle'; notKaydetBtn.textContent = 'Kaydet'; notIptalBtn.classList.add('hidden'); };
             const dosyayiBase64eCevir = (file) => new Promise((resolve, reject) => { const reader = new FileReader(); reader.readAsDataURL(file); reader.onload = () => resolve(reader.result); reader.onerror = error => reject(error); });
             const pdfMetniniCikar = (file) => new Promise((resolve, reject) => { const fileReader = new FileReader(); fileReader.readAsArrayBuffer(file); fileReader.onload = async () => { const typedarray = new Uint8Array(fileReader.result); try { const pdf = await pdfjsLib.getDocument(typedarray).promise; let fullText = ''; for (let i = 1; i <= pdf.numPages; i++) { const page = await pdf.getPage(i); const textContent = await page.getTextContent(); fullText += textContent.items.map(item => item.str).join('\n'); } resolve(fullText); } catch (error) { reject(error); } }; fileReader.onerror = reject; });
             const showModal = (evrak) => { modalTitle.textContent = evrak.konu; pdfFrame.src = evrak.dosyaBase64; modal.style.display = 'block'; modalBackdrop.style.display = 'block'; };
             const hideModal = () => { modal.style.display = 'none'; modalBackdrop.style.display = 'none'; pdfFrame.src = ''; };
             const showNoteModal = (evrak) => { noteModalTitle.textContent = `"${evrak.konu}" Notu`; noteContentView.textContent = evrak.notlar; noteModal.style.display = 'block'; noteModalBackdrop.style.display = 'block'; };
             const hideNoteModal = () => { noteModal.style.display = 'none'; noteModalBackdrop.style.display = 'none'; noteContentView.textContent = ''; };
-            const renderKlasorler = () => { const klasorler = [...new Set(evraklar.map(e => e.klasor).filter(Boolean))]; klasorListesi.innerHTML = ''; const createButton = (name, value) => { const button = document.createElement('button'); button.textContent = name; button.dataset.klasor = value; button.className = `klasor-item px-3 py-1 text-sm font-medium rounded-full cursor-pointer transition-colors duration-200 ${seciliKlasor === value ? 'active' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`; return button; }; klasorListesi.appendChild(createButton('Tüm Evraklar', 'all')); klasorler.sort().forEach(klasor => klasorListesi.appendChild(createButton(klasor, klasor))); };
+            const renderKlasorler = () => { const klasorler = [...new Set(evraklar.map(e => e.klasor).filter(Boolean))]; klasorListesi.innerHTML = ''; const createButton = (name, value) => { const button = document.createElement('button'); button.textContent = name; button.dataset.klasor = value; button.className = `klasor-item px-3 py-1 text-sm font-medium rounded-full cursor-pointer transition-colors duration-200 ${seciliKlasor === value ? 'active' : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'}`; return button; }; klasorListesi.appendChild(createButton('Tüm Evraklar', 'all')); klasorler.sort().forEach(klasor => klasorListesi.appendChild(createButton(klasor, klasor))); };
             const renderEvraklar = (filter = '') => { 
                 evrakListesiBody.innerHTML = ''; 
                 let filtrelenmisEvraklar = evraklar; 
                 if (seciliKlasor !== 'all') { filtrelenmisEvraklar = filtrelenmisEvraklar.filter(e => e.klasor === seciliKlasor); } 
                 if (filter) { filtrelenmisEvraklar = filtrelenmisEvraklar.filter(evrak => { const searchTerm = filter.toLowerCase(); const konuMatch = evrak.konu.toLowerCase().includes(searchTerm); const sayiMatch = evrak.evrakSayisi && evrak.evrakSayisi.toLowerCase().includes(searchTerm); return konuMatch || sayiMatch; }); } 
-                if (filtrelenmisEvraklar.length === 0) { evrakListesiBody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-gray-500">Bu kritere uygun evrak bulunamadı.</td></tr>`; return; } 
+                if (filtrelenmisEvraklar.length === 0) { evrakListesiBody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-gray-500 dark:text-gray-400">Bu kritere uygun evrak bulunamadı.</td></tr>`; return; } 
                 
                 const today = new Date(); 
                 const currentDay = today.getDate();
@@ -358,20 +453,20 @@
                     if (evrak.notlar && evrak.notlar.trim() !== '') { 
                         ikonlar += `<a href="#" class="text-yellow-500 hover:text-yellow-700 view-note ml-2" data-id="${evrak.id}" title="Notu Görüntüle">📋</a>`; 
                     } 
-                    tr.innerHTML = `<td class="px-6 py-4 text-sm font-medium text-gray-900 flex items-center break-words">${ikonlar}<a href="#" class="text-blue-600 hover:text-blue-900 view-pdf ${ikonlar ? 'ml-2' : ''}" data-id="${evrak.id}">${evrak.konu}</a></td><td class="px-6 py-4 text-sm text-gray-500 break-words">${evrak.evrakSayisi}</td><td class="px-6 py-4 text-sm text-gray-500">${formatDate(evrak.gelisTarihi)}</td><td class="px-6 py-4 text-sm text-gray-500">${formatDate(evrak.sonCevapTarihi)}</td><td class="px-6 py-4"><span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${durumRenkleri[evrak.durum] || 'bg-gray-100 text-gray-800'}">${evrak.durum}</span></td><td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"><a href="#" class="text-green-600 hover:text-green-900 edit-evrak" data-id="${evrak.id}">Düzenle</a><a href="#" class="text-red-600 hover:text-red-900 ml-4 delete-evrak" data-id="${evrak.id}">Sil</a></td>`; 
+                    tr.innerHTML = `<td class="px-6 py-4 text-sm font-medium text-gray-900 dark:text-gray-200 flex items-center break-words">${ikonlar}<a href="#" class="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 view-pdf ${ikonlar ? 'ml-2' : ''}" data-id="${evrak.id}">${evrak.konu}</a></td><td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 break-words">${evrak.evrakSayisi}</td><td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">${formatDate(evrak.gelisTarihi)}</td><td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">${formatDate(evrak.sonCevapTarihi)}</td><td class="px-6 py-4"><span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${durumRenkleri[evrak.durum] || 'bg-gray-100 text-gray-800'}">${evrak.durum}</span></td><td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"><a href="#" class="text-green-600 dark:text-green-400 hover:text-green-900 ml-4 edit-evrak" data-id="${evrak.id}">Düzenle</a><a href="#" class="text-red-600 dark:text-red-400 hover:text-red-900 ml-4 delete-evrak" data-id="${evrak.id}">Sil</a></td>`; 
                     evrakListesiBody.appendChild(tr); 
                 }); 
             };
             const renderHizliNotlar = (filter = '') => {
                 hizliNotListesi.innerHTML = '';
                 const filtrelenmisNotlar = hizliNotlar.filter(not => not.baslik.toLowerCase().includes(filter.toLowerCase()) || not.icerik.toLowerCase().includes(filter.toLowerCase()));
-                if (filtrelenmisNotlar.length === 0) { hizliNotListesi.innerHTML = `<p class="text-center py-4 text-gray-500">Kayıtlı not bulunamadı.</p>`; return; }
+                if (filtrelenmisNotlar.length === 0) { hizliNotListesi.innerHTML = `<p class="text-center py-4 text-gray-500 dark:text-gray-400">Kayıtlı not bulunamadı.</p>`; return; }
                 const today = new Date(); const currentDay = today.getDate();
                 today.setHours(0, 0, 0, 0); 
                 
                  filtrelenmisNotlar.sort((a,b) => b.id - a.id).forEach(not => {
                     const div = document.createElement('div');
-                    div.className = 'bg-gray-50 p-4 rounded-lg border';
+                    div.className = 'bg-gray-50 dark:bg-gray-700 p-4 rounded-lg border dark:border-gray-600';
                     div.dataset.id = not.id; // Karttan tıklayınca bulmak için ID ekle
                     div.dataset.type = 'not';
                     let uyariIkonu = '';
@@ -398,12 +493,12 @@
                     div.innerHTML = `
                         <div class="flex justify-between items-start">
                             <div class="flex-1">
-                                <h4 class="font-bold text-gray-800 flex items-center">${uyariIkonu}<span class="${uyariIkonu ? 'ml-2' : ''}">${not.baslik}</span></h4>
-                                <p class="text-sm text-gray-600 mt-1 whitespace-pre-wrap">${not.icerik}</p>
+                                <h4 class="font-bold text-gray-800 dark:text-gray-200 flex items-center">${uyariIkonu}<span class="${uyariIkonu ? 'ml-2' : ''}">${not.baslik}</span></h4>
+                                <p class="text-sm text-gray-600 dark:text-gray-400 mt-1 whitespace-pre-wrap">${not.icerik}</p>
                             </div>
                             <div class="flex-shrink-0 ml-4">
-                                <button class="text-green-600 hover:text-green-900 edit-not" data-id="${not.id}">Düzenle</button>
-                                <button class="text-red-600 hover:text-red-900 ml-2 delete-not" data-id="${not.id}">Sil</button>
+                                <button class="text-green-600 dark:text-green-400 hover:text-green-900 edit-not" data-id="${not.id}">Düzenle</button>
+                                <button class="text-red-600 dark:text-red-400 hover:text-red-900 ml-2 delete-not" data-id="${not.id}">Sil</button>
                             </div>
                         </div>
                     `;
@@ -427,7 +522,7 @@
                   .sort((a, b) => a.sonTarih - b.sonTarih); // En yakın tarih üste gelsin
 
                 if (bekleyenEvraklar.length === 0) {
-                     bekleyenIslemlerListesi.innerHTML = '<li class="text-gray-500">Yaklaşan veya geçen işlem bulunmuyor.</li>';
+                     bekleyenIslemlerListesi.innerHTML = '<li class="text-gray-500 dark:text-gray-400">Yaklaşan veya geçen işlem bulunmuyor.</li>';
                      return;
                 }
 
@@ -435,11 +530,11 @@
                     const li = document.createElement('li');
                     const isGecmis = evrak.sonTarih < today;
                     const isYakin = evrak.farkGun >= 0 && evrak.farkGun <= 3;
-                    li.className = `cursor-pointer hover:bg-gray-100 p-1 rounded ${isGecmis || isYakin ? 'text-red-600 font-medium' : ''}`;
+                    li.className = `cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 p-1 rounded ${isGecmis || isYakin ? 'text-red-600 dark:text-red-400 font-medium' : 'dark:text-gray-300'}`;
                     li.dataset.id = evrak.id;
                     li.dataset.type = 'evrak';
                     li.innerHTML = `
-                       <span class="${isGecmis || isYakin ? 'alert-blink' : ''}">${evrak.konu}</span> - Son Tarih: ${formatDate(evrak.sonCevapTarihi)} ${isGecmis ? '(Geçti)' : ''}
+                       <span class="${isGecmis || isYakin ? 'alert-blink' : ''}">${evrak.konu}</span> - Son: ${formatDate(evrak.sonCevapTarihi)} ${isGecmis ? '(Geçti)' : ''}
                     `;
                     bekleyenIslemlerListesi.appendChild(li);
                 });
@@ -469,13 +564,13 @@
                  });
 
                  if (aktifUyarılar.length === 0) {
-                     bekleyenUyarılarListesi.innerHTML = '<li class="text-gray-500">Aktif uyarı bulunmuyor.</li>';
+                     bekleyenUyarılarListesi.innerHTML = '<li class="text-gray-500 dark:text-gray-400">Aktif uyarı bulunmuyor.</li>';
                      return;
                  }
 
                  aktifUyarılar.forEach(uyari => {
                     const li = document.createElement('li');
-                    li.className = 'cursor-pointer hover:bg-gray-100 p-1 rounded text-red-600 font-medium alert-blink';
+                    li.className = 'cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 p-1 rounded text-red-600 dark:text-red-400 font-medium alert-blink';
                     li.dataset.id = uyari.id;
                     li.dataset.type = uyari.type;
                     li.textContent = `${uyari.type === 'evrak' ? 'Evrak' : 'Not'}: ${uyari.text} (${uyari.bilgi})`;
@@ -484,11 +579,12 @@
             };
 
              const renderAll = () => { 
+                updateStats();
                 renderKlasorler(); 
                 renderEvraklar(aramaInput.value); 
                 renderHizliNotlar(notAramaInput.value); 
-                renderBekleyenIslemler(); // Kartları da güncelle
-                renderBekleyenUyarılar(); // Kartları da güncelle
+                renderBekleyenIslemler(); 
+                renderBekleyenUyarılar(); 
             };
 
             const scrollToItem = (id, type) => {
@@ -501,10 +597,65 @@
                  }
             };
 
+            // Dark Mode Toggle
+            const toggleDarkMode = () => {
+                document.documentElement.classList.toggle('dark');
+                if (document.documentElement.classList.contains('dark')) {
+                    localStorage.setItem('theme', 'dark');
+                    sunIcon.classList.remove('hidden');
+                    moonIcon.classList.add('hidden');
+                } else {
+                    localStorage.setItem('theme', 'light');
+                    sunIcon.classList.add('hidden');
+                    moonIcon.classList.remove('hidden');
+                }
+            };
+
+            const initTheme = () => {
+                const savedTheme = localStorage.getItem('theme');
+                if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                    document.documentElement.classList.add('dark');
+                    sunIcon.classList.remove('hidden');
+                    moonIcon.classList.add('hidden');
+                } else {
+                    document.documentElement.classList.remove('dark');
+                    sunIcon.classList.add('hidden');
+                    moonIcon.classList.remove('hidden');
+                }
+            };
+            
+            // Excel Export
+            const exportToExcel = () => {
+                let csvContent = "data:text/csv;charset=utf-8,\uFEFF"; // Türkçe karakterler için BOM
+                csvContent += "Konu;Evrak Sayısı;Klasör;Geliş Tarihi;Son Cevap Tarihi;Durum;Notlar\n";
+                
+                evraklar.forEach(e => {
+                   const row = [
+                       e.konu,
+                       e.evrakSayisi || '',
+                       e.klasor || '',
+                       formatDate(e.gelisTarihi),
+                       formatDate(e.sonCevapTarihi),
+                       e.durum,
+                       (e.notlar || '').replace(/(\r\n|\n|\r)/gm, " ") // Satır sonlarını temizle
+                   ].map(item => `"${item}"`).join(";");
+                   csvContent += row + "\n";
+                });
+                
+                const encodedUri = encodeURI(csvContent);
+                const link = document.createElement("a");
+                link.setAttribute("href", encodedUri);
+                link.setAttribute("download", "evrak_listesi.csv");
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                showToast("Excel (CSV) dosyası indirildi.", "success");
+            };
+
             // --- Olay Dinleyicileri ---
             tabEvrak.addEventListener('click', () => { tabEvrak.classList.add('active'); tabNotlar.classList.remove('active'); evrakTabContent.classList.remove('hidden'); notlarTabContent.classList.add('hidden'); });
             tabNotlar.addEventListener('click', () => { tabNotlar.classList.add('active'); tabEvrak.classList.remove('active'); notlarTabContent.classList.remove('hidden'); evrakTabContent.classList.add('hidden'); });
-            pdfDosyaInput.addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;try{const t=await pdfMetniniCikar(f);const s=t.match(/Sayı\s*:\s*(.*)/i);if(s)evrakSayisiInput.value=s[1].trim();const k=t.match(/Konu\s*:\s*(.*)/i);if(k)konuInput.value=k[1].trim();const a=t.match(/(\d{2})\.(\d{2})\.(\d{4})/g);if(a){const d=[...new Set(a)].map(s=>{const[d,m,y]=s.split('.');return new Date(y,m-1,d)}).sort((a,b)=>b-a);if(d.length>0)gelisTarihiInput.value=d[0].toISOString().split('T')[0]}const i=t.match(/İlgi\s*:([\s\S]*?)(?=Konu\s*:|\n\n[A-ZÇĞİÖŞÜ])/i);let l=null;if(i&&i[1]){const g=i[1].match(/(\d{2})\.(\d{2})\.(\d{4})/g);if(g){g.forEach(s=>{const[d,m,y]=s.split('.');const c=new Date(y,m-1,d);if(!l||c>l)l=c})}}if(l)sonCevapTarihiInput.value=l.toISOString().split('T')[0];seciliDosyaBase64=await dosyayiBase64eCevir(f)}catch(r){alert("PDF dosyası okunurken bir hata oluştu.")}});
+            pdfDosyaInput.addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;try{const t=await pdfMetniniCikar(f);const s=t.match(/Sayı\s*:\s*(.*)/i);if(s)evrakSayisiInput.value=s[1].trim();const k=t.match(/Konu\s*:\s*(.*)/i);if(k)konuInput.value=k[1].trim();const a=t.match(/(\d{2})\.(\d{2})\.(\d{4})/g);if(a){const d=[...new Set(a)].map(s=>{const[d,m,y]=s.split('.');return new Date(y,m-1,d)}).sort((a,b)=>b-a);if(d.length>0)gelisTarihiInput.value=d[0].toISOString().split('T')[0]}const i=t.match(/İlgi\s*:([\s\S]*?)(?=Konu\s*:|\n\n[A-ZÇĞİÖŞÜ])/i);let l=null;if(i&&i[1]){const g=i[1].match(/(\d{2})\.(\d{2})\.(\d{4})/g);if(g){g.forEach(s=>{const[d,m,y]=s.split('.');const c=new Date(y,m-1,d);if(!l||c>l)l=c})}}if(l)sonCevapTarihiInput.value=l.toISOString().split('T')[0];seciliDosyaBase64=await dosyayiBase64eCevir(f)}catch(r){showToast("PDF dosyası okunurken bir hata oluştu.", 'error')}});
             evrakFormu.addEventListener('submit', async (e) => { 
                 e.preventDefault(); 
                 showLoader('Kaydediliyor...');
@@ -516,16 +667,18 @@
                              Object.assign(evrak, data);
                              const { sha, ...dataToSave } = evrak;
                              await saveDataToGithub(`${evraklarPath}/${evrak.id}.json`, dataToSave, sha);
+                             showToast('Evrak güncellendi.', 'success');
                         }
                     } else { 
                         if (!seciliDosyaBase64) { throw new Error('Lütfen bir PDF dosyası seçin veya mobil tarayıcıyı kullanın.'); } 
                         const newEvrak = { ...data, id: Date.now(), dosyaBase64: seciliDosyaBase64 };
                         await saveDataToGithub(`${evraklarPath}/${newEvrak.id}.json`, newEvrak);
+                        showToast('Evrak kaydedildi.', 'success');
                     } 
-                    await loadDataFromGithub(); // Tekrar yükle ve render et
+                    await loadDataFromGithub(); 
                     formuTemizle(); 
                 } catch(error) {
-                    alert(`Hata: ${error.message}`);
+                    showToast(`Hata: ${error.message}`, 'error');
                 } finally {
                     hideLoader();
                 }
@@ -542,8 +695,9 @@
                     if (confirm('Bu evrakı silmek istediğinizden emin misiniz?')) { 
                         showLoader('Siliniyor...');
                         await deleteDataFromGithub(`${evraklarPath}/${evrak.id}.json`, evrak.sha);
-                        await loadDataFromGithub(); // Tekrar yükle ve render et
+                        await loadDataFromGithub(); 
                         hideLoader();
+                        showToast('Evrak silindi.', 'info');
                     } 
                 } 
                 else if (target.classList.contains('edit-evrak')) { 
@@ -558,7 +712,7 @@
                     uyariTarihiInput.value = evrak.uyariTarihi || '';
                     uyariGunuInput.value = evrak.uyariGunu || ''; 
                     formBasligi.textContent = 'Evrakı Düzenle'; 
-                    kaydetBtn.textContent = 'Değişiklikleri Kaydet'; 
+                    kaydetBtn.textContent = 'Güncelle'; 
                     iptalBtn.classList.remove('hidden'); 
                     dosyaGirisContainer.classList.add('hidden'); 
                     pdfDosyaInput.required = false; 
@@ -576,15 +730,17 @@
                             Object.assign(not, data);
                             const { sha, ...dataToSave } = not;
                             await saveDataToGithub(`${notlarPath}/${not.id}.json`, dataToSave, sha);
+                            showToast('Not güncellendi.', 'success');
                         } 
                     } else { 
                         const newNot = { ...data, id: Date.now() };
                         await saveDataToGithub(`${notlarPath}/${newNot.id}.json`, newNot);
+                        showToast('Not kaydedildi.', 'success');
                     } 
-                    await loadDataFromGithub(); // Tekrar yükle ve render et
+                    await loadDataFromGithub(); 
                     notFormuTemizle();
                 } catch(error) {
-                    alert(`Hata: ${error.message}`);
+                    showToast(`Hata: ${error.message}`, 'error');
                 } finally {
                     hideLoader();
                 }
@@ -600,15 +756,16 @@
                     notUyariTarihiInput.value = not.uyariTarihi || '';
                     notUyariGunuInput.value = not.uyariGunu || ''; 
                     notFormBasligi.textContent = 'Notu Düzenle'; 
-                    notKaydetBtn.textContent = 'Değişiklikleri Kaydet'; 
+                    notKaydetBtn.textContent = 'Güncelle'; 
                     notIptalBtn.classList.remove('hidden'); 
                 } 
                 else if (target.classList.contains('delete-not')) { 
                     if (confirm('Bu notu silmek istediğinizden emin misiniz?')) { 
                         showLoader('Siliniyor...');
                         await deleteDataFromGithub(`${notlarPath}/${not.id}.json`, not.sha);
-                        await loadDataFromGithub(); // Tekrar yükle ve render et
+                        await loadDataFromGithub(); 
                         hideLoader();
+                        showToast('Not silindi.', 'info');
                     } 
                 } 
             });
@@ -616,21 +773,17 @@
             closeNoteModalBtn.addEventListener('click', hideNoteModal); noteModalBackdrop.addEventListener('click', hideNoteModal);
             
             // Kartlardaki öğelere tıklama
-            bekleyenIslemlerListesi.addEventListener('click', (e) => {
-                 if(e.target.tagName === 'LI' && e.target.dataset.id) {
-                     scrollToItem(e.target.dataset.id, e.target.dataset.type);
-                 }
-            });
-             bekleyenUyarılarListesi.addEventListener('click', (e) => {
-                 if(e.target.tagName === 'LI' && e.target.dataset.id) {
-                     scrollToItem(e.target.dataset.id, e.target.dataset.type);
-                 }
-            });
+            bekleyenIslemlerListesi.addEventListener('click', (e) => { if(e.target.tagName === 'LI' && e.target.dataset.id) { scrollToItem(e.target.dataset.id, e.target.dataset.type); } });
+            bekleyenUyarılarListesi.addEventListener('click', (e) => { if(e.target.tagName === 'LI' && e.target.dataset.id) { scrollToItem(e.target.dataset.id, e.target.dataset.type); } });
+            
+            // Yeni Butonlar
+            darkModeToggle.addEventListener('click', toggleDarkMode);
+            excelExportBtn.addEventListener('click', exportToExcel);
 
             // Başlangıç
+            initTheme();
             loadDataFromGithub();
         });
     </script>
 </body>
 </html>
-
